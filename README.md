@@ -8,10 +8,12 @@ walk, or a simple outing with a little more feeling than a regular message.
 The app now supports the complete no-account response loop:
 
 - create an invitation in the three-step composer;
+- offer one or several activity ideas for the recipient to choose from;
+- suggest a fixed time or ask the recipient for their preferred time;
 - receive a public recipient link and a separate private status link;
 - share the recipient link manually through WhatsApp, email, or any messenger;
 - let the recipient accept, suggest an adjustment, or decline with an optional note;
-- see the saved answer on the private status page; and
+- see the saved answer, chosen activity, and preferred time on the private status page; and
 - prevent later submissions from replacing the first response.
 
 The experience also includes:
@@ -115,9 +117,10 @@ sites can improve long-term discoverability.
 
 Every invitation is independent. It receives a cryptographically random public
 recipient token, a different private status token whose SHA-256 hash is stored,
-one invitation row, and at most one response row. The response insert and status
-update run as a transactional D1 batch, and the response primary key ensures the
-first submitted response wins even when two submissions arrive together.
+one invitation row, one optional plan-preference row, and at most one response
+row. The response insert, plan selection, and status update run as a
+transactional D1 batch, and the response primary key ensures the first submitted
+response wins even when two submissions arrive together.
 
 A short burst of roughly 100 people creating or opening their own invitations is
 a reasonable small-scale target for this design. Token lookups are indexed and

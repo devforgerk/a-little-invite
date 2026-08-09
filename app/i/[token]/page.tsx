@@ -1,12 +1,14 @@
 "use client";
 
-import { Heart, LoaderCircle, MessageCircleHeart, Send, X } from "lucide-react";
+import { Check, Clock3, Heart, LoaderCircle, MessageCircleHeart, Send, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { FlowHeader } from "@/app/components/flow-header";
 import { InvitationPreview } from "@/app/components/invitation-preview";
 import {
+  getActivityLabel,
   responseLabels,
+  type ActivityId,
   type InvitationData,
   type ResponseChoice,
 } from "@/app/lib/invitation";
@@ -14,6 +16,11 @@ import {
 type PublicInvitationPayload = {
   invitation: InvitationData;
   responseChoice: ResponseChoice | null;
+  response: {
+    choice: ResponseChoice;
+    selectedActivity: ActivityId | null;
+    preferredTime: string;
+  } | null;
 };
 
 const responsePrompts: Record<ResponseChoice, { title: string; hint: string }> = {
@@ -38,6 +45,8 @@ export default function RecipientInvitationPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedChoice, setSelectedChoice] = useState<ResponseChoice | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityId | null>(null);
+  const [preferredTime, setPreferredTime] = useState("");
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -67,6 +76,12 @@ export default function RecipientInvitationPage() {
 
   function chooseResponse(choice: ResponseChoice) {
     setSelectedChoice(choice);
+    if (choice === "no") {
+      setSelectedActivity(null);
+      setPreferredTime("");
+    } else if (payload?.invitation.activities.length === 1) {
+      setSelectedActivity(payload.invitation.activities[0]);
+    }
     setSubmitError("");
     window.requestAnimationFrame(() => {
       document.querySelector(".response-note-panel")?.scrollIntoView({
@@ -80,6 +95,23 @@ export default function RecipientInvitationPage() {
     event.preventDefault();
     if (!selectedChoice) return;
 
+    if (
+      selectedChoice === "yes" &&
+      payload?.invitation.activities.length !== 1 &&
+      !selectedActivity
+    ) {
+      setSubmitError("Choose the plan that sounds best to you.");
+      return;
+    }
+    if (
+      selectedChoice === "yes" &&
+      payload?.invitation.timeMode === "recipient" &&
+      !preferredTime
+    ) {
+      setSubmitError("Add the time that would work best for you.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError("");
 
@@ -87,9 +119,19 @@ export default function RecipientInvitationPage() {
       const response = await fetch(`/api/invitations/${encodeURIComponent(token)}/response`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ choice: selectedChoice, note }),
+        body: JSON.stringify({
+          choice: selectedChoice,
+          note,
+          selectedActivity,
+          preferredTime,
+        }),
       });
-      const result = (await response.json()) as { choice?: ResponseChoice; error?: string };
+      const result = (await response.json()) as {
+        choice?: ResponseChoice;
+        selectedActivity?: ActivityId | null;
+        preferredTime?: string;
+        error?: string;
+      };
       if (!response.ok) {
         if (response.status === 409) await loadInvitation();
         throw new Error(result.error || "Your response could not be saved just now.");
@@ -101,10 +143,17 @@ export default function RecipientInvitationPage() {
               ...current,
               invitation: { ...current.invitation, state: "responded" },
               responseChoice: result.choice ?? selectedChoice,
+              response: {
+                choice: result.choice ?? selectedChoice,
+                selectedActivity: result.selectedActivity ?? selectedActivity,
+                preferredTime: result.preferredTime ?? preferredTime,
+              },
             }
           : current,
       );
       setSelectedChoice(null);
+      setSelectedActivity(null);
+      setPreferredTime("");
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Your response could not be saved just now.",
@@ -139,7 +188,7 @@ export default function RecipientInvitationPage() {
             draft={payload.invitation}
             templateId={payload.invitation.templateId}
             interactive={payload.invitation.state === "open" && !isSubmitting}
-            response={payload.responseChoice}
+            response={payload.response?.choice ?? payload.responseChoice}
             selectedResponse={selectedChoice}
             onResponse={chooseResponse}
           />
@@ -158,6 +207,53 @@ export default function RecipientInvitationPage() {
                 <h2>{responsePrompts[selectedChoice].title}</h2>
                 <p>{responsePrompts[selectedChoice].hint}</p>
               </div>
+              {selectedChoice !== "no" && payload.invitation.activities.length > 1 && (
+                <fieldset className="response-preference-fieldset">
+                  <legend>
+                    Which plan feels best?
+                    {selectedChoice === "adjust" && <small>Optional</small>}
+                  </legend>
+                  <div className="response-activity-picker">
+                    {payload.invitation.activities.map((activity) => {
+                      const selected = selectedActivity === activity;
+                      return (
+                        <button
+                          key={activity}
+                          type="button"
+                          className={selected ? "is-selected" : ""}
+                          aria-pressed={selected}
+                          onClick={() => {
+                            setSelectedActivity(activity);
+                            setSubmitError("");
+                          }}
+                        >
+                          {selected && <Check size={15} aria-hidden="true" />}
+                          {getActivityLabel(activity, payload.invitation.customActivity)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              )}
+              {selectedChoice !== "no" && payload.invitation.timeMode === "recipient" && (
+                <label className="field-label response-time-field">
+                  Your preferred time
+                  {selectedChoice === "adjust" && <small>Optional</small>}
+                  <span className="input-with-icon">
+                    <Clock3 size={18} aria-hidden="true" />
+                    <input
+                      type="time"
+                      className="field-input"
+                      value={preferredTime}
+                      required={selectedChoice === "yes"}
+                      onChange={(event) => {
+                        setPreferredTime(event.target.value);
+                        setSubmitError("");
+                      }}
+                    />
+                  </span>
+                </label>
+              )}
               <label className="field-label">
                 Your note <small>Optional</small>
                 <textarea
@@ -180,6 +276,8 @@ export default function RecipientInvitationPage() {
                   className="secondary-action"
                   onClick={() => {
                     setSelectedChoice(null);
+                    setSelectedActivity(null);
+                    setPreferredTime("");
                     setSubmitError("");
                   }}
                 >

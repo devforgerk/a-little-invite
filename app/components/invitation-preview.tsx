@@ -78,12 +78,15 @@ export function InvitationPreview({
   selectedResponse?: ResponseChoice | null;
   onResponse?: (choice: ResponseChoice) => void;
 }) {
-  const selectedActivity = getActivity(draft.activity);
+  const offeredActivities = (draft.activities.length ? draft.activities : ["coffee" as const]).map(
+    (activity) => getActivity(activity),
+  );
+  const primaryActivity = offeredActivities[0];
   const activityPhrase =
-    draft.activity === "custom"
-      ? draft.customActivity.trim() || selectedActivity.invitationPhrase
-      : selectedActivity.invitationPhrase;
-  const ActivityIcon = activityIcons[selectedActivity.id];
+    primaryActivity.id === "custom"
+      ? draft.customActivity.trim() || primaryActivity.invitationPhrase
+      : primaryActivity.invitationPhrase;
+  const ActivityIcon = activityIcons[primaryActivity.id];
   const answer = response ? responseCopy(response, draft.fromName) : null;
   const AnswerIcon = answer?.icon;
 
@@ -125,8 +128,8 @@ export function InvitationPreview({
 
       <div className="preview-copy">
         <div
-          key={`${templateId}-${selectedActivity.id}`}
-          className={`preview-illustration activity-${selectedActivity.id}`}
+          key={`${templateId}-${draft.activities.join("-")}`}
+          className={`preview-illustration activity-${primaryActivity.id}`}
           aria-hidden="true"
         >
           <span className="activity-symbol">
@@ -141,7 +144,26 @@ export function InvitationPreview({
             : "A quiet question, meant just for you"}
         </p>
         <p className="preview-greeting">Hey {draft.toName || "you"},</p>
-        <h2>Would you join me for {activityPhrase}?</h2>
+        <h2>
+          {offeredActivities.length > 1
+            ? "Which little plan sounds good to you?"
+            : `Would you join me for ${activityPhrase}?`}
+        </h2>
+        {offeredActivities.length > 1 && (
+          <div className="preview-activity-list" aria-label="Activity options">
+            {offeredActivities.map((activity) => {
+              const Icon = activityIcons[activity.id];
+              return (
+                <span key={activity.id}>
+                  <Icon size={15} aria-hidden="true" />
+                  {activity.id === "custom"
+                    ? draft.customActivity.trim() || activity.label
+                    : activity.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
         <p className="preview-message">“{draft.message || "I saved this moment for you."}”</p>
       </div>
 
@@ -154,7 +176,7 @@ export function InvitationPreview({
         <div>
           <Clock3 size={18} aria-hidden="true" />
           <dt>Time</dt>
-          <dd>{formatTime(draft.time)}</dd>
+          <dd>{draft.timeMode === "recipient" ? "You choose what works" : formatTime(draft.time)}</dd>
         </div>
         <div>
           <MapPin size={18} aria-hidden="true" />

@@ -21,8 +21,9 @@ import { FlowHeader } from "@/app/components/flow-header";
 import {
   formatDate,
   formatTime,
-  getActivity,
+  getActivityLabel,
   responseLabels,
+  type ActivityId,
   type InvitationData,
   type ResponseChoice,
 } from "@/app/lib/invitation";
@@ -33,6 +34,8 @@ type StatusPayload = {
   response: {
     choice: ResponseChoice;
     note: string;
+    selectedActivity: ActivityId | null;
+    preferredTime: string;
     respondedAt: string;
   } | null;
   shareUrl: string;
@@ -116,7 +119,11 @@ export default function PrivateStatusPage() {
     window.setTimeout(() => setCopied(false), 1800);
   }
 
-  const activity = payload ? getActivity(payload.invitation.activity) : null;
+  const activitySummary = payload
+    ? payload.invitation.activities
+        .map((activity) => getActivityLabel(activity, payload.invitation.customActivity))
+        .join(", ")
+    : "";
   const AnswerIcon = payload?.response ? answerIcons[payload.response.choice] : null;
 
   return (
@@ -161,7 +168,7 @@ export default function PrivateStatusPage() {
             <div className="status-plan-heading">
               <span>Invitation sent</span>
               <h2>
-                {activity?.label}
+                {activitySummary}
                 {payload.invitation.toName ? ` with ${payload.invitation.toName}` : ""}
               </h2>
             </div>
@@ -174,7 +181,11 @@ export default function PrivateStatusPage() {
               <div>
                 <Clock3 size={18} aria-hidden="true" />
                 <dt>Time</dt>
-                <dd>{formatTime(payload.invitation.time)}</dd>
+                <dd>
+                  {payload.invitation.timeMode === "recipient"
+                    ? "They choose what works"
+                    : formatTime(payload.invitation.time)}
+                </dd>
               </div>
               <div>
                 <MapPin size={18} aria-hidden="true" />
@@ -191,6 +202,29 @@ export default function PrivateStatusPage() {
               </div>
               <p>They answered</p>
               <h2>{responseLabels[payload.response.choice]}</h2>
+              {(payload.response.selectedActivity || payload.response.preferredTime) && (
+                <dl className="status-answer-preferences">
+                  {payload.response.selectedActivity && (
+                    <div>
+                      <Check size={17} aria-hidden="true" />
+                      <dt>Their plan</dt>
+                      <dd>
+                        {getActivityLabel(
+                          payload.response.selectedActivity,
+                          payload.invitation.customActivity,
+                        )}
+                      </dd>
+                    </div>
+                  )}
+                  {payload.response.preferredTime && (
+                    <div>
+                      <Clock3 size={17} aria-hidden="true" />
+                      <dt>Their time</dt>
+                      <dd>{formatTime(payload.response.preferredTime)}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
               {payload.response.note && <blockquote>“{payload.response.note}”</blockquote>}
               <time dateTime={payload.response.respondedAt}>
                 Received {new Date(payload.response.respondedAt).toLocaleString("en", {

@@ -3,9 +3,11 @@ import { env } from "cloudflare:workers";
 const templateIds = ["playful", "sincere"] as const;
 const activityIds = ["coffee", "dinner", "walk", "movie", "outing", "custom"] as const;
 const responseChoices = ["yes", "adjust", "no"] as const;
+const timeModes = ["fixed", "recipient"] as const;
 
 type TemplateId = (typeof templateIds)[number];
 type ActivityId = (typeof activityIds)[number];
+type TimeMode = (typeof timeModes)[number];
 export type ResponseChoice = (typeof responseChoices)[number];
 export type InvitationState = "open" | "responded" | "expired";
 
@@ -13,10 +15,11 @@ export type InvitationInput = {
   templateId: TemplateId;
   fromName: string;
   toName: string;
-  activity: ActivityId;
+  activities: ActivityId[];
   customActivity: string;
   place: string;
   date: string;
+  timeMode: TimeMode;
   time: string;
   message: string;
 };
@@ -39,6 +42,9 @@ type InvitationRow = {
   response_choice: ResponseChoice | null;
   response_note?: string | null;
   responded_at?: number | null;
+  activity_options?: string | null;
+  selected_activity?: ActivityId | null;
+  preferred_time?: string | null;
 };
 
 export type InvitationView = InvitationInput & {
@@ -53,6 +59,8 @@ export type StatusView = {
   response: {
     choice: ResponseChoice;
     note: string;
+    selectedActivity: ActivityId | null;
+    preferredTime: string;
     respondedAt: string;
   } | null;
 };
@@ -76,6 +84,7 @@ async function initializeSchema() {
     await database.batch([
       database.prepare("SELECT 1 FROM invitations LIMIT 1"),
       database.prepare("SELECT 1 FROM invitation_responses LIMIT 1"),
+      database.prepare("SELECT 1 FROM invitation_plans LIMIT 1"),
     ]);
     return;
   } catch {
@@ -122,6 +131,17 @@ async function initializeSchema() {
     database.prepare(
       "CREATE INDEX IF NOT EXISTS invitation_responses_responded_at_index ON invitation_responses (responded_at)",
     ),
+    database.prepare(`
+      CREATE TABLE IF NOT EXISTS invitation_plans (
+        invitation_id TEXT PRIMARY KEY NOT NULL REFERENCES invitations(id) ON DELETE CASCADE,
+        activity_options TEXT NOT NULL,
+        selected_activity TEXT CHECK (
+          selected_activity IS NULL OR
+          selected_activity IN ('coffee', 'dinner', 'walk', 'movie', 'outing', 'custom')
+        ),
+        preferred_time TEXT
+      )
+    `),
   ]);
 }
 
@@ -175,6 +195,16 @@ function readEnum<const Value extends string>(
   return value as Value;
 }
 
+function readActivities(body: Record<string, unknown>): ActivityId[] {
+  const value = body.activities ?? (body.activity ? [body.activity] : null);
+  if (!Array.isArray(value) || value.length === 0 || value.length > activityIds.length) {
+    throw new InvitationValidationError("Choose at least one activity.");
+  }
+
+  const selected = value.map((activity) => readEnum(activity, activityIds, "Activity"));
+  return [...new Set(selected)];
+}
+
 function isRealDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T12:00:00Z`);
@@ -183,17 +213,22 @@ function isRealDate(value: string) {
 
 export function parseInvitationInput(value: unknown): InvitationInput {
   const body = readObject(value);
-  const activity = readEnum(body.activity, activityIds, "Activity");
+  const selectedActivities = readActivities(body);
   const customActivity = readText(body.customActivity ?? "", "Custom plan", 60, {
-    required: activity === "custom",
+    required: selectedActivities.includes("custom"),
   });
   const date = readText(body.date, "Date", 10);
-  const time = readText(body.time, "Time", 5);
+  const timeMode = readEnum(
+    body.timeMode ?? (body.time ? "fixed" : "recipient"),
+    timeModes,
+    "Time choice",
+  );
+  const time = readText(body.time ?? "", "Time", 5, { required: timeMode === "fixed" });
 
   if (!isRealDate(date)) {
     throw new InvitationValidationError("Choose a valid date.");
   }
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+  if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
     throw new InvitationValidationError("Choose a valid time.");
   }
 
@@ -201,10 +236,11 @@ export function parseInvitationInput(value: unknown): InvitationInput {
     templateId: readEnum(body.templateId, templateIds, "Invitation feeling"),
     fromName: readText(body.fromName, "Your name", 40),
     toName: readText(body.toName, "Their name", 40),
-    activity,
+    activities: selectedActivities,
     customActivity,
     place: readText(body.place, "Place", 100),
     date,
+    timeMode,
     time,
     message: readText(body.message, "Personal note", 220),
   };
@@ -212,10 +248,22 @@ export function parseInvitationInput(value: unknown): InvitationInput {
 
 export function parseResponseInput(value: unknown) {
   const body = readObject(value);
+  const preferredTime = readText(body.preferredTime ?? "", "Preferred time", 5, {
+    required: false,
+  });
+
+  if (preferredTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(preferredTime)) {
+    throw new InvitationValidationError("Choose a valid preferred time.");
+  }
 
   return {
     choice: readEnum(body.choice, responseChoices, "Response"),
     note: readText(body.note ?? "", "Response note", 320, { required: false }),
+    selectedActivity:
+      body.selectedActivity === null || body.selectedActivity === undefined || body.selectedActivity === ""
+        ? null
+        : readEnum(body.selectedActivity, activityIds, "Preferred activity"),
+    preferredTime,
   };
 }
 
@@ -246,15 +294,40 @@ function stateFor(row: InvitationRow): InvitationState {
   return "open";
 }
 
+function readStoredActivities(activityOptions: string | null | undefined, fallback: ActivityId) {
+  if (activityOptions) {
+    try {
+      const stored = JSON.parse(activityOptions) as unknown;
+      if (Array.isArray(stored)) {
+        const valid = stored.filter(
+          (activity): activity is ActivityId =>
+            typeof activity === "string" && activityIds.includes(activity as ActivityId),
+        );
+        const unique = [...new Set(valid)];
+        if (unique.length > 0) return unique;
+      }
+    } catch {
+      // Fall back to the original single activity for older or malformed records.
+    }
+  }
+
+  return [fallback];
+}
+
+function activitiesFor(row: InvitationRow): ActivityId[] {
+  return readStoredActivities(row.activity_options, row.activity);
+}
+
 function invitationFor(row: InvitationRow): InvitationView {
   return {
     templateId: row.template_id,
     fromName: row.from_name,
     toName: row.to_name,
-    activity: row.activity,
+    activities: activitiesFor(row),
     customActivity: row.custom_activity,
     place: row.place,
     date: row.event_date,
+    timeMode: row.event_time ? "fixed" : "recipient",
     time: row.event_time,
     message: row.message,
     state: stateFor(row),
@@ -281,9 +354,13 @@ const invitationSelect = `
     i.expires_at,
     r.choice AS response_choice,
     r.note AS response_note,
-    r.responded_at
+    r.responded_at,
+    p.activity_options,
+    p.selected_activity,
+    p.preferred_time
   FROM invitations i
   LEFT JOIN invitation_responses r ON r.invitation_id = i.id
+  LEFT JOIN invitation_plans p ON p.invitation_id = i.id
 `;
 
 export async function createInvitation(input: InvitationInput) {
@@ -299,31 +376,37 @@ export async function createInvitation(input: InvitationInput) {
     const statusTokenHash = await hashToken(statusToken);
 
     try {
-      const result = await database
-        .prepare(`
-          INSERT INTO invitations (
-            id, public_token, status_token_hash, template_id, from_name, to_name,
-            activity, custom_activity, place, event_date, event_time, message,
-            status, created_at, expires_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
-        `)
-        .bind(
-          id,
-          publicToken,
-          statusTokenHash,
-          input.templateId,
-          input.fromName,
-          input.toName,
-          input.activity,
-          input.customActivity,
-          input.place,
-          input.date,
-          input.time,
-          input.message,
-          now,
-          expiresAt,
-        )
-        .run();
+      const [result] = await database.batch([
+        database
+          .prepare(`
+            INSERT INTO invitations (
+              id, public_token, status_token_hash, template_id, from_name, to_name,
+              activity, custom_activity, place, event_date, event_time, message,
+              status, created_at, expires_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+          `)
+          .bind(
+            id,
+            publicToken,
+            statusTokenHash,
+            input.templateId,
+            input.fromName,
+            input.toName,
+            input.activities[0],
+            input.customActivity,
+            input.place,
+            input.date,
+            input.timeMode === "fixed" ? input.time : "",
+            input.message,
+            now,
+            expiresAt,
+          ),
+        database
+          .prepare(
+            "INSERT INTO invitation_plans (invitation_id, activity_options) VALUES (?, ?)",
+          )
+          .bind(id, JSON.stringify(input.activities)),
+      ]);
 
       if (result.success) {
         return { publicToken, statusToken, expiresAt: new Date(expiresAt).toISOString() };
@@ -348,6 +431,13 @@ export async function getPublicInvitation(publicToken: string) {
   return {
     invitation: invitationFor(row),
     responseChoice: row.response_choice,
+    response: row.response_choice
+      ? {
+          choice: row.response_choice,
+          selectedActivity: row.selected_activity ?? null,
+          preferredTime: row.preferred_time ?? "",
+        }
+      : null,
   };
 }
 
@@ -369,6 +459,8 @@ export async function getStatusInvitation(statusToken: string): Promise<StatusVi
         ? {
             choice: row.response_choice,
             note: row.response_note ?? "",
+            selectedActivity: row.selected_activity ?? null,
+            preferredTime: row.preferred_time ?? "",
             respondedAt: new Date(row.responded_at).toISOString(),
           }
         : null,
@@ -377,18 +469,57 @@ export async function getStatusInvitation(statusToken: string): Promise<StatusVi
 
 export async function submitInvitationResponse(
   publicToken: string,
-  response: { choice: ResponseChoice; note: string },
+  response: {
+    choice: ResponseChoice;
+    note: string;
+    selectedActivity: ActivityId | null;
+    preferredTime: string;
+  },
 ) {
   await ensureSchema();
   const database = getDatabase();
   const invitation = await database
-    .prepare("SELECT id, status, expires_at FROM invitations WHERE public_token = ? LIMIT 1")
+    .prepare(`
+      SELECT i.id, i.status, i.expires_at, i.activity, i.event_time, p.activity_options
+      FROM invitations i
+      LEFT JOIN invitation_plans p ON p.invitation_id = i.id
+      WHERE i.public_token = ?
+      LIMIT 1
+    `)
     .bind(publicToken)
-    .first<{ id: string; status: "open" | "responded"; expires_at: number }>();
+    .first<{
+      id: string;
+      status: "open" | "responded";
+      expires_at: number;
+      activity: ActivityId;
+      event_time: string;
+      activity_options: string | null;
+    }>();
 
   if (!invitation) return { outcome: "missing" as const };
   if (invitation.expires_at <= Date.now()) return { outcome: "expired" as const };
   if (invitation.status === "responded") return { outcome: "responded" as const };
+
+  const offeredActivities = readStoredActivities(
+    invitation.activity_options,
+    invitation.activity,
+  );
+  let selectedActivity = response.choice === "no" ? null : response.selectedActivity;
+  const preferredTime =
+    response.choice === "no" || invitation.event_time ? "" : response.preferredTime;
+
+  if (selectedActivity && !offeredActivities.includes(selectedActivity)) {
+    throw new InvitationValidationError("Choose one of the activities in this invitation.");
+  }
+  if (response.choice === "yes" && offeredActivities.length > 1 && !selectedActivity) {
+    throw new InvitationValidationError("Choose the activity you would prefer.");
+  }
+  if (response.choice !== "no" && offeredActivities.length === 1) {
+    selectedActivity = offeredActivities[0];
+  }
+  if (response.choice === "yes" && !invitation.event_time && !preferredTime) {
+    throw new InvitationValidationError("Choose the time you would prefer.");
+  }
 
   const respondedAt = Date.now();
   const [insertResult] = await database.batch([
@@ -398,8 +529,37 @@ export async function submitInvitationResponse(
       )
       .bind(invitation.id, response.choice, response.note, respondedAt),
     database
-      .prepare("UPDATE invitations SET status = 'responded' WHERE id = ? AND status = 'open'")
-      .bind(invitation.id),
+      .prepare(`
+        INSERT INTO invitation_plans (
+          invitation_id, activity_options, selected_activity, preferred_time
+        )
+        SELECT ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1 FROM invitation_responses
+          WHERE invitation_id = ? AND responded_at = ?
+        )
+        ON CONFLICT(invitation_id) DO UPDATE SET
+          selected_activity = excluded.selected_activity,
+          preferred_time = excluded.preferred_time
+      `)
+      .bind(
+        invitation.id,
+        JSON.stringify(offeredActivities),
+        selectedActivity,
+        preferredTime || null,
+        invitation.id,
+        respondedAt,
+      ),
+    database
+      .prepare(`
+        UPDATE invitations
+        SET status = 'responded'
+        WHERE id = ? AND status = 'open' AND EXISTS (
+          SELECT 1 FROM invitation_responses
+          WHERE invitation_id = ? AND responded_at = ?
+        )
+      `)
+      .bind(invitation.id, invitation.id, respondedAt),
   ]);
 
   if (!insertResult.success || insertResult.meta.changes !== 1) {
@@ -410,6 +570,8 @@ export async function submitInvitationResponse(
     outcome: "saved" as const,
     response: {
       choice: response.choice,
+      selectedActivity,
+      preferredTime,
       respondedAt: new Date(respondedAt).toISOString(),
     },
   };

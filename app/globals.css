@@ -345,6 +345,14 @@ button:disabled {
   font-weight: 800;
 }
 
+.activity-fieldset legend span {
+  margin-left: 5px;
+  color: #8b847c;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .activity-picker {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -432,6 +440,80 @@ button:disabled {
 .activity-picker button:nth-child(6) .activity-option-icon {
   background: #efc2c5;
   color: #7f3f48;
+}
+
+.time-choice-fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.time-choice-fieldset legend {
+  margin-bottom: 9px;
+  color: #3e3a36;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.time-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  border: 1px solid #d5d0c8;
+  border-radius: 8px;
+  background: #efebe5;
+  padding: 4px;
+}
+
+.time-mode-switch button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #69625b;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.time-mode-switch button.is-selected {
+  border-color: #c8c1b8;
+  background: #fff;
+  color: #292724;
+  box-shadow: 0 3px 10px rgb(41 39 36 / 8%);
+}
+
+.recipient-time-note {
+  display: grid;
+  min-height: 72px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #c9d8d1;
+  border-radius: 8px;
+  background: #edf3f0;
+  padding: 11px 13px;
+  color: #3f6658;
+}
+
+.recipient-time-note strong,
+.recipient-time-note span {
+  display: block;
+}
+
+.recipient-time-note strong {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.recipient-time-note span {
+  margin-top: 2px;
+  color: #63786f;
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .field-label {
@@ -920,6 +1002,27 @@ button:disabled {
   font-size: 47px;
   font-weight: 700;
   line-height: 0.98;
+}
+
+.preview-activity-list {
+  display: flex;
+  max-width: 560px;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 15px;
+}
+
+.preview-activity-list span {
+  display: inline-flex;
+  min-height: 31px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.2;
 }
 
 .preview-message {
@@ -1531,6 +1634,60 @@ button:disabled {
   line-height: 1.5;
 }
 
+.response-preference-fieldset {
+  min-width: 0;
+  margin: 0 0 18px;
+  border: 0;
+  padding: 0;
+}
+
+.response-preference-fieldset legend {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+  color: #3e3a36;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.response-preference-fieldset legend small {
+  color: #8f8880;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.response-activity-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.response-activity-picker button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #cfc9c1;
+  border-radius: 8px;
+  background: #fff;
+  padding: 9px 10px;
+  color: #5b554f;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.response-activity-picker button.is-selected {
+  border-color: #456e5f;
+  background: #e5efea;
+  color: #345a4d;
+}
+
+.response-time-field {
+  margin-bottom: 18px;
+}
+
 .response-note-panel .field-label small {
   color: #8f8880;
   font-size: 10px;
@@ -1781,6 +1938,47 @@ button:disabled {
   font-size: 22px;
   font-style: italic;
   line-height: 1.35;
+}
+
+.status-answer-preferences {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 17px 0 5px;
+  border-top: 1px solid #d9d3cb;
+  border-bottom: 1px solid #d9d3cb;
+}
+
+.status-answer-preferences > div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  padding: 13px 12px;
+}
+
+.status-answer-preferences > div + div {
+  border-left: 1px solid #d9d3cb;
+}
+
+.status-answer-preferences svg {
+  grid-row: 1 / 3;
+  margin-top: 2px;
+  color: #5a7469;
+}
+
+.status-answer-preferences dt {
+  color: #8a837a;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.status-answer-preferences dd {
+  overflow-wrap: anywhere;
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 850;
 }
 
 .status-answer time {
@@ -2176,6 +2374,11 @@ button:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .time-mode-switch button {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
   .creation-actions {
     grid-template-columns: 1fr;
   }
@@ -2227,6 +2430,10 @@ button:disabled {
     padding: 20px 16px;
   }
 
+  .response-activity-picker {
+    grid-template-columns: 1fr;
+  }
+
   .response-note-actions {
     display: grid;
     grid-template-columns: 1fr;
@@ -2267,6 +2474,15 @@ button:disabled {
   .status-answer,
   .status-waiting {
     padding: 22px 18px;
+  }
+
+  .status-answer-preferences {
+    grid-template-columns: 1fr;
+  }
+
+  .status-answer-preferences > div + div {
+    border-top: 1px solid #d9d3cb;
+    border-left: 0;
   }
 
   .status-tools {

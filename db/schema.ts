@@ -42,3 +42,14 @@ export const invitationResponses = sqliteTable(
   },
   (table) => [index("invitation_responses_responded_at_index").on(table.respondedAt)],
 );
+
+export const invitationPlans = sqliteTable("invitation_plans", {
+  invitationId: text("invitation_id")
+    .primaryKey()
+    .references(() => invitations.id, { onDelete: "cascade" }),
+  activityOptions: text("activity_options").notNull(),
+  selectedActivity: text("selected_activity", {
+    enum: ["coffee", "dinner", "walk", "movie", "outing", "custom"],
+  }),
+  preferredTime: text("preferred_time"),
+});

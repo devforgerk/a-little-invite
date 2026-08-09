@@ -1,14 +1,16 @@
 export type TemplateId = "playful" | "sincere";
 export type ResponseChoice = "yes" | "adjust" | "no";
 export type ActivityId = "coffee" | "dinner" | "walk" | "movie" | "outing" | "custom";
+export type TimeMode = "fixed" | "recipient";
 
 export type InvitationDraft = {
   fromName: string;
   toName: string;
-  activity: ActivityId;
+  activities: ActivityId[];
   customActivity: string;
   place: string;
   date: string;
+  timeMode: TimeMode;
   time: string;
   message: string;
 };
@@ -51,16 +53,22 @@ export const responseLabels: Record<ResponseChoice, string> = {
 export const defaultDraft: InvitationDraft = {
   fromName: "Alex",
   toName: "Sam",
-  activity: "coffee",
+  activities: ["coffee"],
   customActivity: "",
   place: "That cozy place we keep talking about",
   date: "",
+  timeMode: "fixed",
   time: "18:30",
   message: "No grand occasion. I would just really like a little time with you.",
 };
 
 export function getActivity(id: ActivityId) {
   return activities.find((activity) => activity.id === id) ?? activities[0];
+}
+
+export function getActivityLabel(id: ActivityId, customActivity = "") {
+  if (id === "custom") return customActivity.trim() || "Custom plan";
+  return getActivity(id).label;
 }
 
 export function formatDate(value: string) {

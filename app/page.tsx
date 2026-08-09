@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clapperboard,
+  Clock3,
   Coffee,
   Compass,
   Copy,
@@ -17,6 +18,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   MapPin,
+  MessageCircleHeart,
   MoonStar,
   PencilLine,
   Share2,
@@ -82,7 +84,15 @@ export default function Home() {
     () => templates.find((template) => template.id === templateId) ?? templates[0],
     [templateId],
   );
-  const selectedActivity = useMemo(() => getActivity(draft.activity), [draft.activity]);
+  const selectedActivities = useMemo(
+    () => draft.activities.map((activity) => getActivity(activity)),
+    [draft.activities],
+  );
+  const activitySummary = selectedActivities
+    .map((activity) =>
+      activity.id === "custom" ? draft.customActivity.trim() || activity.label : activity.label,
+    )
+    .join(", ");
   const SelectedTemplateIcon = templateIcons[selectedTemplate.id];
 
   function updateDraft<Key extends keyof InvitationDraft>(
@@ -98,6 +108,21 @@ export default function Home() {
     setShowRecipientView(true);
   }
 
+  function toggleActivity(activity: ActivityId) {
+    setCreationError("");
+    setDraft((current) => {
+      const selected = current.activities.includes(activity);
+      if (selected && current.activities.length === 1) return current;
+
+      return {
+        ...current,
+        activities: selected
+          ? current.activities.filter((item) => item !== activity)
+          : [...current.activities, activity],
+      };
+    });
+  }
+
   function changeMobileView(view: MobileView) {
     setMobileView(view);
     window.requestAnimationFrame(() => {
@@ -109,11 +134,17 @@ export default function Home() {
     if (!draft.fromName.trim() || !draft.toName.trim()) {
       return { step: 0, message: "Add both names before creating the invitation." };
     }
-    if (draft.activity === "custom" && !draft.customActivity.trim()) {
+    if (draft.activities.length === 0) {
+      return { step: 1, message: "Choose at least one idea for the invitation." };
+    }
+    if (draft.activities.includes("custom") && !draft.customActivity.trim()) {
       return { step: 1, message: "Give your custom plan a name." };
     }
-    if (!draft.place.trim() || !draft.date || !draft.time) {
-      return { step: 1, message: "Add the place, date, and time before creating." };
+    if (!draft.place.trim() || !draft.date) {
+      return { step: 1, message: "Add the place and date before creating." };
+    }
+    if (draft.timeMode === "fixed" && !draft.time) {
+      return { step: 1, message: "Choose a time or let the receiver suggest one." };
     }
     if (!draft.message.trim()) {
       return { step: 2, message: "Add a short personal note before creating." };
@@ -349,18 +380,18 @@ export default function Home() {
                   </div>
 
                   <fieldset className="activity-fieldset">
-                    <legend>What are you inviting them to?</legend>
+                    <legend>What could the two of you do? <span>Choose one or more</span></legend>
                     <div className="activity-picker">
                       {activities.map((activity) => {
                         const Icon = activityIcons[activity.id];
-                        const selected = activity.id === draft.activity;
+                        const selected = draft.activities.includes(activity.id);
 
                         return (
                           <button
                             key={activity.id}
                             type="button"
                             className={selected ? "is-selected" : ""}
-                            onClick={() => updateDraft("activity", activity.id)}
+                            onClick={() => toggleActivity(activity.id)}
                             aria-pressed={selected}
                           >
                             <span className="activity-option-icon">
@@ -374,7 +405,7 @@ export default function Home() {
                     </div>
                   </fieldset>
 
-                  {draft.activity === "custom" && (
+                  {draft.activities.includes("custom") && (
                     <label className="field-label">
                       Name your plan
                       <input
@@ -403,6 +434,30 @@ export default function Home() {
                     </span>
                   </label>
 
+                  <fieldset className="time-choice-fieldset">
+                    <legend>Who should choose the time?</legend>
+                    <div className="time-mode-switch">
+                      <button
+                        type="button"
+                        className={draft.timeMode === "fixed" ? "is-selected" : ""}
+                        aria-pressed={draft.timeMode === "fixed"}
+                        onClick={() => updateDraft("timeMode", "fixed")}
+                      >
+                        <Clock3 size={17} aria-hidden="true" />
+                        I’ll suggest one
+                      </button>
+                      <button
+                        type="button"
+                        className={draft.timeMode === "recipient" ? "is-selected" : ""}
+                        aria-pressed={draft.timeMode === "recipient"}
+                        onClick={() => updateDraft("timeMode", "recipient")}
+                      >
+                        <MessageCircleHeart size={17} aria-hidden="true" />
+                        Let them choose
+                      </button>
+                    </div>
+                  </fieldset>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="field-label">
                       Date
@@ -414,16 +469,26 @@ export default function Home() {
                         onChange={(event) => updateDraft("date", event.target.value)}
                       />
                     </label>
-                    <label className="field-label">
-                      Time
-                      <input
-                        type="time"
-                        className="field-input"
-                        value={draft.time}
-                        required
-                        onChange={(event) => updateDraft("time", event.target.value)}
-                      />
-                    </label>
+                    {draft.timeMode === "fixed" ? (
+                      <label className="field-label">
+                        Time
+                        <input
+                          type="time"
+                          className="field-input"
+                          value={draft.time}
+                          required
+                          onChange={(event) => updateDraft("time", event.target.value)}
+                        />
+                      </label>
+                    ) : (
+                      <div className="recipient-time-note">
+                        <MessageCircleHeart size={19} aria-hidden="true" />
+                        <div>
+                          <strong>They’ll suggest a time</strong>
+                          <span>Their preferred time will arrive with the response.</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -455,9 +520,7 @@ export default function Home() {
                     <div>
                       <strong>{selectedTemplate.name}</strong>
                       <p>
-                        {draft.activity === "custom"
-                          ? draft.customActivity || "Custom plan"
-                          : selectedActivity.label}
+                        {activitySummary || "Choose an idea"}
                         {draft.toName ? ` for ${draft.toName}` : ""}
                       </p>
                     </div>
@@ -532,7 +595,7 @@ export default function Home() {
               </button>
             </div>
             <InvitationPreview
-              key={`${templateId}-${draft.activity}-live`}
+              key={`${templateId}-${draft.activities.join("-")}-live`}
               draft={draft}
               templateId={templateId}
               response={null}
@@ -559,7 +622,7 @@ export default function Home() {
           </div>
           <div className="recipient-canvas">
             <InvitationPreview
-              key={`${templateId}-${draft.activity}-recipient`}
+              key={`${templateId}-${draft.activities.join("-")}-recipient`}
               draft={draft}
               templateId={templateId}
               interactive
