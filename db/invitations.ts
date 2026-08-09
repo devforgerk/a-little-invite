@@ -72,6 +72,16 @@ function getDatabase() {
 async function initializeSchema() {
   const database = getDatabase();
 
+  try {
+    await database.batch([
+      database.prepare("SELECT 1 FROM invitations LIMIT 1"),
+      database.prepare("SELECT 1 FROM invitation_responses LIMIT 1"),
+    ]);
+    return;
+  } catch {
+    // A fresh local or hosted database still needs the self-bootstrapping schema below.
+  }
+
   await database.batch([
     database.prepare(`
       CREATE TABLE IF NOT EXISTS invitations (

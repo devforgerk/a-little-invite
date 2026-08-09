@@ -83,8 +83,12 @@ test("keeps the invitation and response workflow contract in source", async () =
   assert.match(recipientPage, /maxLength=\{320\}/);
   assert.match(statusPage, /Refresh response/);
   assert.match(statusPage, /setInterval/);
+  assert.match(statusPage, /AUTO_REFRESH_INTERVAL_MS = 60_000/);
+  assert.match(statusPage, /MAX_AUTO_REFRESHES = 15/);
+  assert.match(statusPage, /document\.visibilityState/);
   assert.match(database, /crypto\.subtle\.digest\("SHA-256"/);
   assert.match(database, /INSERT OR IGNORE INTO invitation_responses/);
+  assert.match(database, /SELECT 1 FROM invitations LIMIT 1/);
   assert.match(database, /status_token_hash/);
   assert.match(schema, /uniqueIndex\("invitations_public_token_unique"\)/);
   assert.match(schema, /invitationId: text\("invitation_id"\)\s*\.primaryKey\(\)/);

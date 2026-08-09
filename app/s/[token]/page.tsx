@@ -44,6 +44,9 @@ const answerIcons = {
   no: Heart,
 };
 
+const AUTO_REFRESH_INTERVAL_MS = 60_000;
+const MAX_AUTO_REFRESHES = 15;
+
 export default function PrivateStatusPage() {
   const params = useParams<{ token: string }>();
   const token = params.token;
@@ -91,7 +94,18 @@ export default function PrivateStatusPage() {
   useEffect(() => {
     if (payload?.invitation.state !== "open") return;
 
-    const timer = window.setInterval(() => void loadStatus(true), 20_000);
+    let automaticRefreshes = 0;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      if (automaticRefreshes >= MAX_AUTO_REFRESHES) {
+        window.clearInterval(timer);
+        return;
+      }
+
+      automaticRefreshes += 1;
+      void loadStatus(true);
+    }, AUTO_REFRESH_INTERVAL_MS);
+
     return () => window.clearInterval(timer);
   }, [loadStatus, payload?.invitation.state]);
 
@@ -131,7 +145,7 @@ export default function PrivateStatusPage() {
             <div className="status-title-row">
               <div>
                 <h1>{payload.invitation.toName}’s answer lives here.</h1>
-                <p>Keep this page private. It checks for a response while you have it open.</p>
+                <p>Keep this page private. Their answer will appear here when it arrives.</p>
               </div>
               <span className={`status-badge status-${payload.invitation.state}`}>
                 {payload.invitation.state === "open"

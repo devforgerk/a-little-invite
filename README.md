@@ -59,6 +59,50 @@ The composer and private status page rewrite returned links to the browser's
 current origin. Links copied from the Vercel deployment therefore stay on the
 personal Vercel address.
 
+This is a hostname layer, not a backend migration. The Vercel project currently
+proxies to the Sites deployment, which still runs the Worker and D1 database.
+That origin must remain deployed. For a fully independent personal deployment,
+move the Worker and D1 database to a personal Cloudflare account or replace the
+database before treating the project as a long-term public service.
+
+## Capacity and invitation isolation
+
+Every invitation is independent. It receives a cryptographically random public
+recipient token, a different private status token whose SHA-256 hash is stored,
+one invitation row, and at most one response row. The response insert and status
+update run as a transactional D1 batch, and the response primary key ensures the
+first submitted response wins even when two submissions arrive together.
+
+A short burst of roughly 100 people creating or opening their own invitations is
+a reasonable small-scale target for this design. Token lookups are indexed and
+D1 queues short bursts of queries. This is an engineering expectation, not an
+availability guarantee: the hosted deployment has not been subjected to a
+production load test, and a sustained 100-user workload is different from 100
+people visiting around the same time.
+
+To protect the free request budget, an open private status page checks only while
+its tab is visible, once per minute, for at most 15 automatic checks. Manual
+refresh remains available after that.
+
+Current published free-tier limits include:
+
+- [Vercel Hobby](https://vercel.com/docs/plans/hobby): up to 1,000,000 edge
+  requests per usage period for personal, non-commercial projects;
+- [Cloudflare D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/):
+  5,000,000 rows read per day and 100,000 rows written per day; and
+- [Cloudflare D1 limits](https://developers.cloudflare.com/d1/platform/limits/):
+  500 MB per database and 5 GB total storage on the free plan.
+
+One hundred invitations and their responses are far below those database limits
+under normal use. Traffic abuse, bots, or clients refreshing continuously can
+consume a free quota much faster than real invitation traffic.
+
+Before opening the service to a large unknown audience, add rate limiting or a
+bot challenge to write endpoints, monitoring for API errors and quota use, and a
+retention job that deletes expired invitations. Expiration currently closes an
+invitation to new responses but does not remove its stored names, place, or
+message.
+
 Generate a migration after changing `db/schema.ts` with:
 
 ```bash
