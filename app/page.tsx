@@ -5,13 +5,18 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Clapperboard,
   Clock3,
+  Coffee,
+  Compass,
+  Footprints,
   Heart,
   MapPin,
   MessageCircleHeart,
   MoonStar,
   PartyPopper,
   Sparkles,
+  UtensilsCrossed,
   WandSparkles,
   X,
 } from "lucide-react";
@@ -19,11 +24,12 @@ import { useMemo, useState } from "react";
 
 type TemplateId = "playful" | "sincere";
 type ResponseChoice = "yes" | "adjust" | "no";
+type ActivityId = "coffee" | "dinner" | "walk" | "movie" | "outing" | "custom";
 
 type InvitationDraft = {
   fromName: string;
   toName: string;
-  activity: string;
+  activity: ActivityId;
   customActivity: string;
   place: string;
   date: string;
@@ -53,19 +59,44 @@ const templates: Array<{
 
 const steps = ["Feeling", "The plan", "Your note"];
 
-const activities = [
-  "Coffee",
-  "Dinner",
-  "A walk",
-  "Movie",
-  "Tiny outing",
-  "Custom plan",
+const activities: Array<{
+  id: ActivityId;
+  label: string;
+  invitationPhrase: string;
+  icon: typeof Coffee;
+}> = [
+  { id: "coffee", label: "Coffee", invitationPhrase: "coffee", icon: Coffee },
+  {
+    id: "dinner",
+    label: "Dinner",
+    invitationPhrase: "dinner together",
+    icon: UtensilsCrossed,
+  },
+  {
+    id: "walk",
+    label: "A walk",
+    invitationPhrase: "a slow walk",
+    icon: Footprints,
+  },
+  { id: "movie", label: "Movie", invitationPhrase: "a movie", icon: Clapperboard },
+  {
+    id: "outing",
+    label: "Tiny outing",
+    invitationPhrase: "a tiny outing",
+    icon: Compass,
+  },
+  {
+    id: "custom",
+    label: "Custom plan",
+    invitationPhrase: "a little plan",
+    icon: Sparkles,
+  },
 ];
 
 const defaultDraft: InvitationDraft = {
   fromName: "Alex",
   toName: "Sam",
-  activity: "Coffee",
+  activity: "coffee",
   customActivity: "",
   place: "That cozy place we keep talking about",
   date: "",
@@ -117,6 +148,10 @@ function responseCopy(choice: ResponseChoice, fromName: string) {
   };
 }
 
+function getActivity(id: ActivityId) {
+  return activities.find((activity) => activity.id === id) ?? activities[0];
+}
+
 function InvitationPreview({
   draft,
   templateId,
@@ -130,10 +165,12 @@ function InvitationPreview({
   response: ResponseChoice | null;
   onResponse?: (choice: ResponseChoice) => void;
 }) {
-  const activity =
-    draft.activity === "Custom plan"
-      ? draft.customActivity.trim() || "a little plan"
-      : draft.activity;
+  const selectedActivity = getActivity(draft.activity);
+  const activityPhrase =
+    draft.activity === "custom"
+      ? draft.customActivity.trim() || selectedActivity.invitationPhrase
+      : selectedActivity.invitationPhrase;
+  const ActivityIcon = selectedActivity.icon;
   const answer = response ? responseCopy(response, draft.fromName) : null;
   const AnswerIcon = answer?.icon;
 
@@ -173,15 +210,24 @@ function InvitationPreview({
       </header>
 
       <div className="preview-copy">
-        <div className="preview-illustration" aria-hidden="true">
-          {templateId === "playful" ? (
-            <span className="coffee-cup">☕</span>
-          ) : (
-            <span className="letter-heart">♡</span>
-          )}
+        <div
+          key={`${templateId}-${selectedActivity.id}`}
+          className={`preview-illustration activity-${selectedActivity.id}`}
+          aria-hidden="true"
+        >
+          <span className="activity-symbol">
+            <ActivityIcon size={38} strokeWidth={1.7} />
+          </span>
+          <span className="activity-mark activity-mark-one" />
+          <span className="activity-mark activity-mark-two" />
         </div>
+        <p className="preview-whisper">
+          {templateId === "playful"
+            ? "A tiny plan with lovely potential"
+            : "A quiet question, meant just for you"}
+        </p>
         <p className="preview-greeting">Hey {draft.toName || "you"},</p>
-        <h2>Would you join me for {activity.toLowerCase()}?</h2>
+        <h2>Would you join me for {activityPhrase}?</h2>
         <p className="preview-message">“{draft.message || "I saved this moment for you."}”</p>
       </div>
 
@@ -259,6 +305,7 @@ export default function Home() {
     () => templates.find((template) => template.id === templateId) ?? templates[0],
     [templateId],
   );
+  const selectedActivity = useMemo(() => getActivity(draft.activity), [draft.activity]);
   const SelectedTemplateIcon = selectedTemplate.icon;
 
   function updateDraft<Key extends keyof InvitationDraft>(
@@ -282,8 +329,8 @@ export default function Home() {
               <Heart size={19} fill="currentColor" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-base font-black">A Little Invite</p>
-              <p className="truncate text-xs text-[#68625b]">Make a moment, not a message.</p>
+              <p className="brand-wordmark truncate">A Little Invite</p>
+              <p className="brand-tagline truncate">Make a moment, not a message.</p>
             </div>
           </div>
           <span className="hidden items-center gap-2 text-sm font-semibold text-[#68625b] sm:flex">
@@ -297,8 +344,8 @@ export default function Home() {
         <section className="border-b border-[#292724]/12 bg-[#fbfaf7] px-4 py-7 sm:px-7 lg:border-b-0 lg:border-r lg:py-9">
           <div className="mx-auto max-w-xl">
             <div className="mb-7">
-              <p className="mb-2 text-sm font-bold text-[#b74734]">Create an invitation</p>
-              <h1 className="max-w-lg text-3xl font-black leading-tight sm:text-4xl">
+              <p className="romantic-kicker mb-2">Create an invitation</p>
+              <h1 className="studio-title max-w-lg">
                 Ask with a little more feeling.
               </h1>
             </div>
@@ -386,20 +433,33 @@ export default function Home() {
                     <p>Give them enough detail to picture the moment.</p>
                   </div>
 
-                  <label className="field-label">
-                    What are you inviting them to?
-                    <select
-                      className="field-input"
-                      value={draft.activity}
-                      onChange={(event) => updateDraft("activity", event.target.value)}
-                    >
-                      {activities.map((activity) => (
-                        <option key={activity}>{activity}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <fieldset className="activity-fieldset">
+                    <legend>What are you inviting them to?</legend>
+                    <div className="activity-picker">
+                      {activities.map((activity) => {
+                        const Icon = activity.icon;
+                        const selected = activity.id === draft.activity;
 
-                  {draft.activity === "Custom plan" && (
+                        return (
+                          <button
+                            key={activity.id}
+                            type="button"
+                            className={selected ? "is-selected" : ""}
+                            onClick={() => updateDraft("activity", activity.id)}
+                            aria-pressed={selected}
+                          >
+                            <span className="activity-option-icon">
+                              <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+                            </span>
+                            <span>{activity.label}</span>
+                            {selected && <Check size={14} aria-hidden="true" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  {draft.activity === "custom" && (
                     <label className="field-label">
                       Name your plan
                       <input
@@ -475,9 +535,9 @@ export default function Home() {
                     <div>
                       <strong>{selectedTemplate.name}</strong>
                       <p>
-                        {draft.activity === "Custom plan"
+                        {draft.activity === "custom"
                           ? draft.customActivity || "Custom plan"
-                          : draft.activity}
+                          : selectedActivity.label}
                         {draft.toName ? ` for ${draft.toName}` : ""}
                       </p>
                     </div>
@@ -528,6 +588,7 @@ export default function Home() {
               </button>
             </div>
             <InvitationPreview
+              key={`${templateId}-${draft.activity}-live`}
               draft={draft}
               templateId={templateId}
               response={null}
@@ -554,6 +615,7 @@ export default function Home() {
           </div>
           <div className="recipient-canvas">
             <InvitationPreview
+              key={`${templateId}-${draft.activity}-recipient`}
               draft={draft}
               templateId={templateId}
               interactive

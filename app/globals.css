@@ -8,8 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-manrope);
+  --font-romantic: var(--font-cormorant);
+  --font-handwritten: var(--font-caveat);
 }
 
 * {
@@ -26,7 +27,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
 }
 
 button,
@@ -48,6 +49,38 @@ button:disabled {
 ::selection {
   background: #f0bd58;
   color: #292724;
+}
+
+.brand-wordmark {
+  margin: 0;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.brand-tagline {
+  margin: 3px 0 0;
+  color: #68625b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.romantic-kicker {
+  margin-top: 0;
+  color: #b74734;
+  font-family: var(--font-caveat), cursive;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.studio-title {
+  margin: 0;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 0.98;
 }
 
 .step-nav {
@@ -116,9 +149,10 @@ button:disabled {
 .form-section h2 {
   margin: 0;
   color: #292724;
-  font-size: 23px;
-  font-weight: 900;
-  line-height: 1.2;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1.05;
 }
 
 .form-section > div:first-child > p {
@@ -207,6 +241,109 @@ button:disabled {
   border-color: #292724;
   background: #292724;
   color: #fff;
+}
+
+.activity-fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.activity-fieldset legend {
+  margin-bottom: 10px;
+  color: #3e3a36;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.activity-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.activity-picker button {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 72px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  overflow: hidden;
+  border: 1px solid #d5d0c8;
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+  color: #514c47;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease,
+    transform 160ms ease;
+}
+
+.activity-picker button:hover {
+  border-color: #8f8880;
+  transform: translateY(-2px);
+}
+
+.activity-picker button.is-selected {
+  border-color: #292724;
+  box-shadow: 0 7px 18px rgb(41 39 36 / 10%);
+  color: #292724;
+}
+
+.activity-picker button > svg {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.activity-option-icon {
+  display: grid;
+  width: 33px;
+  height: 33px;
+  place-items: center;
+  border-radius: 8px;
+  transition: transform 180ms ease;
+}
+
+.activity-picker button:hover .activity-option-icon,
+.activity-picker button.is-selected .activity-option-icon {
+  transform: rotate(-4deg) scale(1.05);
+}
+
+.activity-picker button:nth-child(1) .activity-option-icon {
+  background: #f2c6a9;
+  color: #783f30;
+}
+
+.activity-picker button:nth-child(2) .activity-option-icon {
+  background: #d9c2d9;
+  color: #684a68;
+}
+
+.activity-picker button:nth-child(3) .activity-option-icon {
+  background: #bed9cf;
+  color: #355d52;
+}
+
+.activity-picker button:nth-child(4) .activity-option-icon {
+  background: #f3d67e;
+  color: #66521e;
+}
+
+.activity-picker button:nth-child(5) .activity-option-icon {
+  background: #c8d2e8;
+  color: #3f5279;
+}
+
+.activity-picker button:nth-child(6) .activity-option-icon {
+  background: #efc2c5;
+  color: #7f3f48;
 }
 
 .field-label {
@@ -338,6 +475,7 @@ button:disabled {
 
 .preview-stage {
   background: #ebe7e0;
+  animation: stage-in 420ms ease-out both;
 }
 
 .preview-open-button {
@@ -357,13 +495,14 @@ button:disabled {
   position: relative;
   isolation: isolate;
   display: flex;
-  min-height: 650px;
+  min-height: 680px;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid;
   border-radius: 8px;
   padding: 28px;
   box-shadow: 0 24px 54px rgb(52 46 40 / 14%);
+  animation: card-arrive 420ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
 }
 
 .template-playful {
@@ -493,6 +632,10 @@ button:disabled {
 }
 
 .preview-illustration {
+  --activity-color: #b65442;
+  --activity-soft: #f1c7b8;
+  --activity-shadow: #4e9b8d;
+  position: relative;
   display: grid;
   width: 82px;
   height: 82px;
@@ -503,48 +646,150 @@ button:disabled {
 
 .template-playful .preview-illustration {
   border: 2px solid #302720;
-  background: #e5614f;
-  box-shadow: 8px 8px 0 #4e9b8d;
+  background: var(--activity-color);
+  color: #fff9eb;
+  box-shadow: 8px 8px 0 var(--activity-shadow);
   rotate: -2deg;
 }
 
 .template-sincere .preview-illustration {
   border: 1px solid #7c9287;
-  background: #dfe7e2;
-  color: #9d4f4d;
+  background: var(--activity-soft);
+  color: var(--activity-color);
 }
 
-.coffee-cup {
-  display: block;
-  font-size: 44px;
-  animation: cup-wave 2.8s ease-in-out infinite;
+.activity-coffee {
+  --activity-color: #b65442;
+  --activity-soft: #f1c7b8;
+  --activity-shadow: #4e9b8d;
 }
 
-.letter-heart {
+.activity-dinner {
+  --activity-color: #765875;
+  --activity-soft: #ddd0df;
+  --activity-shadow: #e8a34c;
+}
+
+.activity-walk {
+  --activity-color: #3f7d6e;
+  --activity-soft: #cce0d8;
+  --activity-shadow: #e56b55;
+}
+
+.activity-movie {
+  --activity-color: #b38324;
+  --activity-soft: #f0dda7;
+  --activity-shadow: #667aad;
+}
+
+.activity-outing {
+  --activity-color: #526b9a;
+  --activity-soft: #d4dbeb;
+  --activity-shadow: #d75f58;
+}
+
+.activity-custom {
+  --activity-color: #a54d61;
+  --activity-soft: #ebcfd6;
+  --activity-shadow: #6a8e82;
+}
+
+.activity-symbol {
+  display: grid;
+  place-items: center;
+  animation: symbol-arrive 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.activity-coffee .activity-symbol {
+  animation-name: symbol-arrive, cup-wave;
+  animation-duration: 520ms, 2.8s;
+  animation-delay: 0ms, 520ms;
+  animation-iteration-count: 1, infinite;
+}
+
+.activity-dinner .activity-symbol {
+  animation-name: symbol-arrive, dinner-sway;
+  animation-duration: 520ms, 3.4s;
+  animation-delay: 0ms, 520ms;
+  animation-iteration-count: 1, infinite;
+}
+
+.activity-walk .activity-symbol {
+  animation-name: symbol-arrive, walking-step;
+  animation-duration: 520ms, 2.4s;
+  animation-delay: 0ms, 520ms;
+  animation-iteration-count: 1, infinite;
+}
+
+.activity-movie .activity-symbol {
+  animation-name: symbol-arrive, movie-tilt;
+  animation-duration: 520ms, 3s;
+  animation-delay: 0ms, 520ms;
+  animation-iteration-count: 1, infinite;
+}
+
+.activity-outing .activity-symbol {
+  animation-name: symbol-arrive, compass-turn;
+  animation-duration: 520ms, 4s;
+  animation-delay: 0ms, 520ms;
+  animation-iteration-count: 1, infinite;
+}
+
+.activity-custom .activity-symbol {
+  animation-name: symbol-arrive, sparkle-turn;
+  animation-duration: 520ms, 3.2s;
+  animation-delay: 0ms, 520ms;
+  animation-iteration-count: 1, infinite;
+}
+
+.activity-mark {
+  position: absolute;
   display: block;
-  font-family: Georgia, serif;
-  font-size: 54px;
-  line-height: 1;
-  animation: heart-breathe 3.2s ease-in-out infinite;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.72;
+}
+
+.activity-mark-one {
+  top: 11px;
+  right: 8px;
+  rotate: 48deg;
+  animation: mark-twinkle 2.2s ease-in-out infinite;
+}
+
+.activity-mark-two {
+  bottom: 12px;
+  left: 7px;
+  rotate: -42deg;
+  animation: mark-twinkle 2.2s 700ms ease-in-out infinite;
+}
+
+.preview-whisper {
+  margin: 0 0 3px;
+  color: #b74734;
+  font-family: var(--font-caveat), cursive;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .preview-greeting {
-  margin: 0 0 8px;
-  font-size: 16px;
-  font-weight: 800;
+  margin: 0 0 6px;
+  font-family: var(--font-caveat), cursive;
+  font-size: 29px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .preview-copy h2 {
   max-width: 560px;
   margin: 0;
-  font-size: 40px;
-  font-weight: 950;
-  line-height: 1.04;
-}
-
-.template-sincere .preview-copy h2 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 47px;
   font-weight: 700;
+  line-height: 0.98;
 }
 
 .preview-message {
@@ -605,8 +850,9 @@ button:disabled {
 
 .response-prompt {
   margin: 0 0 11px;
-  font-size: 12px;
-  font-weight: 900;
+  font-family: var(--font-caveat), cursive;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .response-actions {
@@ -657,8 +903,9 @@ button:disabled {
 
 .response-result h3 {
   margin: 0 0 4px;
-  font-size: 15px;
-  font-weight: 950;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .response-result p {
@@ -756,6 +1003,37 @@ button:disabled {
   }
 }
 
+@keyframes stage-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes card-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes symbol-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.65) rotate(-14deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
 @keyframes paper-drift {
   0%,
   100% {
@@ -796,6 +1074,68 @@ button:disabled {
   }
 }
 
+@keyframes dinner-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes walking-step {
+  0%,
+  100% {
+    transform: translateX(-2px) translateY(1px);
+  }
+  50% {
+    transform: translateX(3px) translateY(-3px);
+  }
+}
+
+@keyframes movie-tilt {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes compass-turn {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes sparkle-turn {
+  0%,
+  100% {
+    transform: scale(0.94) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.08) rotate(10deg);
+  }
+}
+
+@keyframes mark-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scaleX(0.8);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scaleX(1.15);
+  }
+}
+
 @keyframes response-in {
   from {
     opacity: 0;
@@ -829,6 +1169,10 @@ button:disabled {
 }
 
 @media (max-width: 680px) {
+  .studio-title {
+    font-size: 41px;
+  }
+
   .step-nav button {
     justify-content: center;
     font-size: 0;
@@ -839,12 +1183,12 @@ button:disabled {
   }
 
   .invitation-preview {
-    min-height: 620px;
+    min-height: 690px;
     padding: 20px;
   }
 
   .preview-copy h2 {
-    font-size: 32px;
+    font-size: 39px;
   }
 
   .preview-stamp {
@@ -879,6 +1223,10 @@ button:disabled {
 
   .response-actions button {
     min-height: 40px;
+  }
+
+  .activity-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

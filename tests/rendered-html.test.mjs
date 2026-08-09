@@ -47,12 +47,26 @@ test("keeps the phase-one product contract in source", async () => {
   ]);
 
   assert.match(page, /type TemplateId = "playful" \| "sincere"/);
+  assert.match(page, /type ActivityId = "coffee" \| "dinner" \| "walk"/);
+  assert.match(page, /id: "movie"/);
+  assert.match(page, /id: "outing"/);
+  assert.match(page, /className="activity-picker"/);
+  assert.match(page, /activity-\$\{selectedActivity\.id\}/);
   assert.match(page, /Open recipient view/);
   assert.match(page, /I’d love to/);
   assert.match(page, /Adjust it/);
   assert.match(page, /Not this time/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
+  assert.match(css, /\.activity-coffee/);
+  assert.match(css, /\.activity-dinner/);
+  assert.match(css, /\.activity-walk/);
+  assert.match(css, /\.activity-movie/);
+  assert.match(css, /\.activity-outing/);
+  assert.match(css, /--font-cormorant/);
+  assert.match(css, /--font-caveat/);
   assert.match(layout, /url:\s*"\/og\.png"/);
+  assert.match(layout, /Cormorant_Garamond/);
+  assert.match(layout, /Caveat/);
   assert.match(packageJson, /"lucide-react"/);
   assert.doesNotMatch(page, /WHATSAPP_NUMBER|EMAIL_ADDRESS|SMS_NUMBER/);
 });
