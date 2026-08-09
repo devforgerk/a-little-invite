@@ -52,6 +52,9 @@ test("keeps the phase-one product contract in source", async () => {
   assert.match(page, /id: "outing"/);
   assert.match(page, /className="activity-picker"/);
   assert.match(page, /activity-\$\{selectedActivity\.id\}/);
+  assert.match(page, /aria-label="Invitation studio view"/);
+  assert.match(page, /template-swatches/);
+  assert.match(page, /preview-for-you/);
   assert.match(page, /Open recipient view/);
   assert.match(page, /I’d love to/);
   assert.match(page, /Adjust it/);
@@ -64,6 +67,9 @@ test("keeps the phase-one product contract in source", async () => {
   assert.match(css, /\.activity-outing/);
   assert.match(css, /--font-cormorant/);
   assert.match(css, /--font-caveat/);
+  assert.match(css, /\.mobile-view-switch/);
+  assert.match(css, /\.mobile-view-hidden/);
+  assert.match(css, /\.live-mark/);
   assert.match(layout, /url:\s*"\/og\.png"/);
   assert.match(layout, /Cormorant_Garamond/);
   assert.match(layout, /Caveat/);

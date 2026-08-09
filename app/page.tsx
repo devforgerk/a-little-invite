@@ -9,12 +9,14 @@ import {
   Clock3,
   Coffee,
   Compass,
+  Eye,
   Footprints,
   Heart,
   MapPin,
   MessageCircleHeart,
   MoonStar,
   PartyPopper,
+  PencilLine,
   Sparkles,
   UtensilsCrossed,
   WandSparkles,
@@ -25,6 +27,7 @@ import { useMemo, useState } from "react";
 type TemplateId = "playful" | "sincere";
 type ResponseChoice = "yes" | "adjust" | "no";
 type ActivityId = "coffee" | "dinner" | "walk" | "movie" | "outing" | "custom";
+type MobileView = "editor" | "preview";
 
 type InvitationDraft = {
   fromName: string;
@@ -126,9 +129,11 @@ function formatTime(value: string) {
 
 function responseCopy(choice: ResponseChoice, fromName: string) {
   if (choice === "yes") {
+    const owner = fromName.trim() ? `${fromName.trim()}’s` : "their";
+
     return {
       icon: PartyPopper,
-      title: `That just made ${fromName || "their"} day.`,
+      title: `That just made ${owner} day.`,
       text: "A tiny yes can make a very ordinary day feel special.",
     };
   }
@@ -204,8 +209,9 @@ function InvitationPreview({
           )}
           A little invitation from {draft.fromName || "someone special"}
         </span>
-        <span className="preview-number" aria-hidden="true">
-          01
+        <span className="preview-for-you">
+          <Heart size={13} fill="currentColor" aria-hidden="true" />
+          just for you
         </span>
       </header>
 
@@ -297,6 +303,7 @@ export default function Home() {
   const [step, setStep] = useState(0);
   const [templateId, setTemplateId] = useState<TemplateId>("playful");
   const [draft, setDraft] = useState<InvitationDraft>(defaultDraft);
+  const [mobileView, setMobileView] = useState<MobileView>("editor");
   const [showRecipientView, setShowRecipientView] = useState(false);
   const [previewResponse, setPreviewResponse] =
     useState<ResponseChoice | null>(null);
@@ -320,6 +327,13 @@ export default function Home() {
     setShowRecipientView(true);
   }
 
+  function changeMobileView(view: MobileView) {
+    setMobileView(view);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+
   return (
     <main className="min-h-screen bg-[#f4f1ec] text-[#292724]">
       <header className="border-b border-[#292724]/12 bg-[#fbfaf7] px-4 sm:px-7">
@@ -340,8 +354,40 @@ export default function Home() {
         </div>
       </header>
 
+      <div className="mobile-view-bar">
+        <div className="mobile-view-switch" role="tablist" aria-label="Invitation studio view">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileView === "editor"}
+            aria-controls="invitation-editor"
+            className={mobileView === "editor" ? "is-selected" : ""}
+            onClick={() => changeMobileView("editor")}
+          >
+            <PencilLine size={17} aria-hidden="true" />
+            Create
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileView === "preview"}
+            aria-controls="invitation-live-preview"
+            className={mobileView === "preview" ? "is-selected" : ""}
+            onClick={() => changeMobileView("preview")}
+          >
+            <Eye size={17} aria-hidden="true" />
+            Preview
+          </button>
+        </div>
+      </div>
+
       <div className="mx-auto grid max-w-[1440px] lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[minmax(360px,0.78fr)_minmax(520px,1.22fr)]">
-        <section className="border-b border-[#292724]/12 bg-[#fbfaf7] px-4 py-7 sm:px-7 lg:border-b-0 lg:border-r lg:py-9">
+        <section
+          id="invitation-editor"
+          className={`editor-stage border-b border-[#292724]/12 bg-[#fbfaf7] px-4 py-7 sm:px-7 lg:border-b-0 lg:border-r lg:py-9 ${
+            mobileView === "preview" ? "mobile-view-hidden" : ""
+          }`}
+        >
           <div className="mx-auto max-w-xl">
             <div className="mb-7">
               <p className="romantic-kicker mb-2">Create an invitation</p>
@@ -389,9 +435,17 @@ export default function Home() {
                           <span className={`template-icon template-icon-${template.id}`}>
                             <Icon size={20} aria-hidden="true" />
                           </span>
-                          <span>
+                          <span className="template-copy">
                             <strong>{template.name}</strong>
                             <small>{template.description}</small>
+                            <span
+                              className={`template-swatches template-swatches-${template.id}`}
+                              aria-hidden="true"
+                            >
+                              <i />
+                              <i />
+                              <i />
+                            </span>
                           </span>
                           <span className="template-check">
                             {selected && <Check size={14} aria-hidden="true" />}
@@ -575,11 +629,20 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="preview-stage px-4 py-7 sm:px-8 lg:px-10 lg:py-9" aria-label="Live invitation preview">
+        <section
+          id="invitation-live-preview"
+          className={`preview-stage px-4 py-7 sm:px-8 lg:px-10 lg:py-9 ${
+            mobileView === "editor" ? "mobile-view-hidden" : ""
+          }`}
+          aria-label="Live invitation preview"
+        >
           <div className="mx-auto w-full max-w-2xl lg:sticky lg:top-8">
             <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-black">Live recipient preview</p>
+              <div className="preview-status-copy">
+                <p className="text-sm font-black">
+                  <span className="live-mark" aria-hidden="true" />
+                  Live recipient preview
+                </p>
                 <p className="text-xs text-[#68625b]">Updates as you type</p>
               </div>
               <button type="button" className="preview-open-button" onClick={openRecipientView}>

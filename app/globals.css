@@ -8,9 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-manrope);
-  --font-romantic: var(--font-cormorant);
-  --font-handwritten: var(--font-caveat);
+  --font-sans: var(--font-manrope, "Avenir Next");
+  --font-romantic: var(--font-cormorant, "Iowan Old Style");
+  --font-handwritten: var(--font-caveat, "Snell Roundhand");
 }
 
 * {
@@ -27,7 +27,8 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope, "Avenir Next"), "Avenir Next", Arial, Helvetica,
+    sans-serif;
 }
 
 button,
@@ -51,9 +52,15 @@ button:disabled {
   color: #292724;
 }
 
+:where(button, input, textarea, select):focus-visible {
+  outline: 2px solid #b74734;
+  outline-offset: 2px;
+}
+
 .brand-wordmark {
   margin: 0;
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: var(--font-cormorant, "Iowan Old Style"), "Iowan Old Style", Georgia,
+    serif;
   font-size: 23px;
   font-weight: 700;
   line-height: 1;
@@ -69,7 +76,8 @@ button:disabled {
 .romantic-kicker {
   margin-top: 0;
   color: #b74734;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-caveat, "Snell Roundhand"), "Snell Roundhand", "Segoe Print",
+    cursive;
   font-size: 23px;
   font-weight: 700;
   line-height: 1;
@@ -77,10 +85,20 @@ button:disabled {
 
 .studio-title {
   margin: 0;
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: var(--font-cormorant, "Iowan Old Style"), "Iowan Old Style", Georgia,
+    serif;
   font-size: 48px;
   font-weight: 700;
   line-height: 0.98;
+}
+
+.mobile-view-bar {
+  display: none;
+}
+
+.editor-stage {
+  position: relative;
+  animation: editor-in 360ms ease-out both;
 }
 
 .step-nav {
@@ -103,6 +121,11 @@ button:disabled {
   font-size: 13px;
   font-weight: 700;
   text-align: left;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.step-nav button:hover {
+  color: #292724;
 }
 
 .step-nav button > span {
@@ -149,7 +172,8 @@ button:disabled {
 .form-section h2 {
   margin: 0;
   color: #292724;
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: var(--font-cormorant, "Iowan Old Style"), "Iowan Old Style", Georgia,
+    serif;
   font-size: 31px;
   font-weight: 700;
   line-height: 1.05;
@@ -168,6 +192,7 @@ button:disabled {
 }
 
 .template-picker > button {
+  position: relative;
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) 22px;
   min-height: 78px;
@@ -182,6 +207,23 @@ button:disabled {
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
+.template-picker > button::before {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: #efb84e;
+  content: "";
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.template-picker > button:nth-child(2)::before {
+  background: #718c81;
+}
+
 .template-picker > button:hover {
   border-color: #8f8880;
   transform: translateY(-1px);
@@ -189,12 +231,58 @@ button:disabled {
 
 .template-picker > button.is-selected {
   border-color: #292724;
+  background: #fffdf8;
   box-shadow: 0 9px 22px rgb(41 39 36 / 9%);
+}
+
+.template-picker > button.is-selected::before {
+  opacity: 1;
 }
 
 .template-picker strong,
 .template-picker small {
   display: block;
+}
+
+.template-copy {
+  min-width: 0;
+}
+
+.template-swatches {
+  display: flex;
+  gap: 4px;
+  margin-top: 9px;
+}
+
+.template-swatches i {
+  display: block;
+  width: 17px;
+  height: 5px;
+  border-radius: 2px;
+}
+
+.template-swatches-playful i:nth-child(1) {
+  background: #efb84e;
+}
+
+.template-swatches-playful i:nth-child(2) {
+  background: #df6451;
+}
+
+.template-swatches-playful i:nth-child(3) {
+  background: #4f9184;
+}
+
+.template-swatches-sincere i:nth-child(1) {
+  background: #718c81;
+}
+
+.template-swatches-sincere i:nth-child(2) {
+  background: #a75659;
+}
+
+.template-swatches-sincere i:nth-child(3) {
+  background: #d9c8b4;
 }
 
 .template-picker strong {
@@ -364,12 +452,13 @@ button:disabled {
   border: 1px solid #cfc9c1;
   border-radius: 8px;
   outline: 0;
-  background: #fff;
+  background: #fefdfb;
   padding: 11px 13px;
   color: #292724;
   font-size: 15px;
   font-weight: 500;
   transition: border-color 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 1px 0 rgb(41 39 36 / 3%);
 }
 
 .field-input::placeholder {
@@ -474,8 +563,25 @@ button:disabled {
 }
 
 .preview-stage {
+  position: relative;
   background: #ebe7e0;
   animation: stage-in 420ms ease-out both;
+}
+
+.preview-status-copy > p:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-mark {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: #b74734;
+  box-shadow: 0 0 0 4px rgb(183 71 52 / 10%);
+  animation: live-breathe 2s ease-in-out infinite;
 }
 
 .preview-open-button {
@@ -503,6 +609,17 @@ button:disabled {
   padding: 28px;
   box-shadow: 0 24px 54px rgb(52 46 40 / 14%);
   animation: card-arrive 420ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+.invitation-preview::after {
+  position: absolute;
+  z-index: -1;
+  inset: 8px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  content: "";
+  opacity: 0.08;
+  pointer-events: none;
 }
 
 .template-playful {
@@ -617,10 +734,15 @@ button:disabled {
   background: #e0e8e3;
 }
 
-.preview-number {
-  font-size: 12px;
-  font-weight: 900;
-  opacity: 0.48;
+.preview-for-you {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-caveat, "Snell Roundhand"), "Snell Roundhand", "Segoe Print",
+    cursive;
+  font-size: 17px;
+  font-weight: 700;
+  opacity: 0.7;
 }
 
 .preview-copy {
@@ -769,7 +891,8 @@ button:disabled {
 .preview-whisper {
   margin: 0 0 3px;
   color: #b74734;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-caveat, "Snell Roundhand"), "Snell Roundhand", "Segoe Print",
+    cursive;
   font-size: 22px;
   font-weight: 700;
   line-height: 1.1;
@@ -777,7 +900,8 @@ button:disabled {
 
 .preview-greeting {
   margin: 0 0 6px;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-caveat, "Snell Roundhand"), "Snell Roundhand", "Segoe Print",
+    cursive;
   font-size: 29px;
   font-weight: 700;
   line-height: 1;
@@ -786,7 +910,8 @@ button:disabled {
 .preview-copy h2 {
   max-width: 560px;
   margin: 0;
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: var(--font-cormorant, "Iowan Old Style"), "Iowan Old Style", Georgia,
+    serif;
   font-size: 47px;
   font-weight: 700;
   line-height: 0.98;
@@ -850,7 +975,8 @@ button:disabled {
 
 .response-prompt {
   margin: 0 0 11px;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-caveat, "Snell Roundhand"), "Snell Roundhand", "Segoe Print",
+    cursive;
   font-size: 20px;
   font-weight: 700;
 }
@@ -873,6 +999,8 @@ button:disabled {
   color: inherit;
   font-size: 11px;
   font-weight: 900;
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .response-actions button:first-child {
@@ -891,6 +1019,7 @@ button:disabled {
 
 .response-actions button:not(:disabled):hover {
   transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgb(41 39 36 / 10%);
 }
 
 .response-result {
@@ -903,7 +1032,8 @@ button:disabled {
 
 .response-result h3 {
   margin: 0 0 4px;
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: var(--font-cormorant, "Iowan Old Style"), "Iowan Old Style", Georgia,
+    serif;
   font-size: 20px;
   font-weight: 700;
 }
@@ -1003,12 +1133,35 @@ button:disabled {
   }
 }
 
+@keyframes editor-in {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes stage-in {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes live-breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
   }
 }
 
@@ -1174,8 +1327,12 @@ button:disabled {
   }
 
   .step-nav button {
+    flex-direction: column;
     justify-content: center;
-    font-size: 0;
+    gap: 5px;
+    min-height: 58px;
+    font-size: 10px;
+    text-align: center;
   }
 
   .step-nav button > span {
@@ -1192,10 +1349,26 @@ button:disabled {
   }
 
   .preview-stamp {
-    max-width: calc(100% - 38px);
+    max-width: 205px;
     overflow: hidden;
+    padding-right: 9px;
+    padding-left: 9px;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+
+  .preview-header {
+    gap: 9px;
+  }
+
+  .preview-for-you {
+    flex: 0 0 auto;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .paper-mark-two {
+    display: none;
   }
 
   .preview-details {
@@ -1227,6 +1400,59 @@ button:disabled {
 
   .activity-picker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .mobile-view-bar {
+    position: sticky;
+    z-index: 30;
+    top: 0;
+    display: block;
+    border-bottom: 1px solid #2927241f;
+    background: rgb(251 250 247 / 96%);
+    padding: 8px 16px;
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-view-switch {
+    display: grid;
+    max-width: 430px;
+    margin: 0 auto;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid #cfc9c1;
+    border-radius: 8px;
+    background: #ece8e1;
+    padding: 3px;
+  }
+
+  .mobile-view-switch button {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #6b655f;
+    font-size: 13px;
+    font-weight: 800;
+    transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .mobile-view-switch button.is-selected {
+    background: #fff;
+    color: #292724;
+    box-shadow: 0 2px 8px rgb(41 39 36 / 10%);
+  }
+
+  .mobile-view-hidden {
+    display: none;
+  }
+
+  .preview-stage {
+    min-height: calc(100vh - 122px);
   }
 }
 
