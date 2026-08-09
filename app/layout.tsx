@@ -30,6 +30,9 @@ export function generateMetadata(): Metadata {
     title,
     description,
     applicationName: title,
+    verification: {
+      google: "n52RWLvWm7q6v8YtcdGv3Hxsnyfgw2YiLlog3AOjrgc",
+    },
     keywords: [
       "date invitation",
       "coffee invitation",
