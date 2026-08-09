@@ -25,6 +25,27 @@ There is no login and no contact list. Link possession is the privacy boundary:
 the recipient link can answer the invitation, while the private status link can
 read the response. Private status tokens are stored only as SHA-256 hashes.
 
+## Privacy and browser inspection
+
+Browser developer tools can always show the HTML, JavaScript, URL, and API data
+already delivered to that browser. A recipient can therefore inspect the name,
+place, time, message, and response state for the invitation they opened. The
+creator can inspect the response loaded by their private status page. This is
+normal web behavior and cannot be hidden by minifying the frontend.
+
+Developer tools do not expose the D1 database binding, stored status-token
+hashes, or a list of other invitations. Access to a record requires its long,
+random URL token. Anyone who receives or steals a recipient link can read that
+invitation and submit its first response; anyone with the private status link
+can read the answer. Do not put passwords, financial details, intimate secrets,
+or other high-risk personal information in an invitation.
+
+The site uses a no-referrer policy so tokenized paths are not sent to unrelated
+sites in the HTTP `Referer` header. Invitation and private-status routes also
+publish `noindex` directives and are omitted from the sitemap. Browser history,
+screenshots, extensions, shared devices, and copied links remain outside the
+app's control.
+
 ## Run locally
 
 Requires Node.js `>=22.13.0`.
@@ -64,6 +85,31 @@ proxies to the Sites deployment, which still runs the Worker and D1 database.
 That origin must remain deployed. For a fully independent personal deployment,
 move the Worker and D1 database to a personal Cloudflare account or replace the
 database before treating the project as a long-term public service.
+
+## Google Search setup
+
+The public homepage has canonical metadata, a crawlable `robots.txt`, and a
+one-page sitemap at:
+
+```text
+https://a-little-invite.vercel.app/sitemap.xml
+```
+
+Recipient invitations and private response pages are intentionally excluded
+from search. To register the homepage with Google:
+
+1. Open [Google Search Console](https://search.google.com/search-console) and
+   add the URL-prefix property `https://a-little-invite.vercel.app/`.
+2. Choose the HTML tag or HTML file verification method. Add the exact token or
+   file Google provides to this project, deploy it, and then click **Verify**.
+3. Submit `https://a-little-invite.vercel.app/sitemap.xml` in the Sitemaps page.
+4. Inspect the homepage URL and choose **Request indexing**.
+
+A `vercel.app` subdomain cannot be verified as a Domain property because its
+DNS belongs to Vercel, so use the URL-prefix option. Google says crawling may
+take from a few days to a few weeks and requesting indexing does not guarantee a
+ranking. A custom domain, useful public wording, and genuine links from other
+sites can improve long-term discoverability.
 
 ## Capacity and invitation isolation
 
@@ -118,6 +164,7 @@ npm run db:generate
 - `app/components/`: shared invitation and flow UI
 - `app/globals.css`: responsive layout, templates, and animation
 - `app/layout.tsx`: document metadata and fonts
+- `app/robots.ts` and `app/sitemap.ts`: public search discovery rules
 - `worker/`: Cloudflare-compatible server entry
 - `db/`: D1 schema, validation, token handling, and queries
 - `drizzle/`: generated database migrations

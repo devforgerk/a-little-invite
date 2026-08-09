@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Caveat, Cormorant_Garamond, Manrope } from "next/font/google";
-import { headers } from "next/headers";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -23,22 +22,41 @@ const caveat = Caveat({
 const title = "A Little Invite";
 const description =
   "Create a thoughtful invitation for coffee, dinner, a walk, or a moment together.";
+const publicSiteUrl = "https://a-little-invite.vercel.app/";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host?.startsWith("localhost") ? "http" : "https");
-  const metadataBase = new URL(host ? `${protocol}://${host}` : "http://localhost:3000");
-
+export function generateMetadata(): Metadata {
   return {
-    metadataBase,
+    metadataBase: new URL(publicSiteUrl),
     title,
     description,
+    applicationName: title,
+    keywords: [
+      "date invitation",
+      "coffee invitation",
+      "romantic invitation",
+      "outing invitation",
+      "online invitation maker",
+    ],
+    referrer: "no-referrer",
+    alternates: {
+      canonical: publicSiteUrl,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
+    },
     openGraph: {
       title,
       description,
+      url: publicSiteUrl,
+      siteName: title,
       type: "website",
       images: [
         {

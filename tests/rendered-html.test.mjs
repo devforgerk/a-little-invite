@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(`http://localhost${pathname}`, {
       headers: { accept: "text/html" },
     }),
     {
@@ -38,6 +38,21 @@ test("server-renders the invitation studio", async () => {
   assert.doesNotMatch(html, /signin-with-chatgpt|Sign in with ChatGPT/i);
 });
 
+test("serves public search discovery files", async () => {
+  const robotsResponse = await render("/robots.txt");
+  assert.equal(robotsResponse.status, 200);
+  const robots = await robotsResponse.text();
+  assert.match(robots, /User-Agent: \*/i);
+  assert.match(robots, /Disallow: \/api\//i);
+  assert.match(robots, /Sitemap: https:\/\/a-little-invite\.vercel\.app\/sitemap\.xml/i);
+
+  const sitemapResponse = await render("/sitemap.xml");
+  assert.equal(sitemapResponse.status, 200);
+  const sitemap = await sitemapResponse.text();
+  assert.match(sitemap, /<loc>https:\/\/a-little-invite\.vercel\.app<\/loc>/i);
+  assert.doesNotMatch(sitemap, /\/i\/|\/s\//i);
+});
+
 test("keeps the invitation and response workflow contract in source", async () => {
   const [
     page,
@@ -51,6 +66,11 @@ test("keeps the invitation and response workflow contract in source", async () =
     recipientPage,
     statusPage,
     hosting,
+    robots,
+    sitemap,
+    recipientLayout,
+    statusLayout,
+    vercelConfig,
   ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -63,6 +83,11 @@ test("keeps the invitation and response workflow contract in source", async () =
     readFile(new URL("../app/i/[token]/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/s/[token]/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/robots.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/i/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/s/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../vercel.json", import.meta.url), "utf8"),
   ]);
 
   assert.match(invitationTypes, /type TemplateId = "playful" \| "sincere"/);
@@ -105,8 +130,18 @@ test("keeps the invitation and response workflow contract in source", async () =
   assert.match(css, /\.mobile-view-hidden/);
   assert.match(css, /\.live-mark/);
   assert.match(layout, /url:\s*"\/og\.png"/);
+  assert.match(layout, /canonical:\s*publicSiteUrl/);
+  assert.match(layout, /referrer:\s*"no-referrer"/);
   assert.match(layout, /Cormorant_Garamond/);
   assert.match(layout, /Caveat/);
+  assert.match(robots, /disallow:\s*\["\/api\/"\]/);
+  assert.match(robots, /sitemap:/);
+  assert.match(sitemap, /changeFrequency:\s*"monthly"/);
+  assert.doesNotMatch(sitemap, /\/i\/|\/s\//);
+  assert.match(recipientLayout, /index:\s*false/);
+  assert.match(statusLayout, /index:\s*false/);
+  assert.match(vercelConfig, /Referrer-Policy/);
+  assert.match(vercelConfig, /X-Robots-Tag/);
   assert.match(packageJson, /"lucide-react"/);
   assert.doesNotMatch(page, /WHATSAPP_NUMBER|EMAIL_ADDRESS|SMS_NUMBER/);
   assert.doesNotMatch(database, /status_token\s+TEXT/i);
