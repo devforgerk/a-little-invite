@@ -38,27 +38,57 @@ test("server-renders the invitation studio", async () => {
   assert.doesNotMatch(html, /signin-with-chatgpt|Sign in with ChatGPT/i);
 });
 
-test("keeps the phase-one product contract in source", async () => {
-  const [page, css, layout, packageJson] = await Promise.all([
+test("keeps the invitation and response workflow contract in source", async () => {
+  const [
+    page,
+    css,
+    layout,
+    packageJson,
+    invitationTypes,
+    preview,
+    database,
+    schema,
+    recipientPage,
+    statusPage,
+    hosting,
+  ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/lib/invitation.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/invitation-preview.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../db/invitations.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/i/[token]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/s/[token]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /type TemplateId = "playful" \| "sincere"/);
-  assert.match(page, /type ActivityId = "coffee" \| "dinner" \| "walk"/);
-  assert.match(page, /id: "movie"/);
-  assert.match(page, /id: "outing"/);
+  assert.match(invitationTypes, /type TemplateId = "playful" \| "sincere"/);
+  assert.match(invitationTypes, /type ActivityId = "coffee" \| "dinner" \| "walk"/);
+  assert.match(invitationTypes, /id: "movie"/);
+  assert.match(invitationTypes, /id: "outing"/);
   assert.match(page, /className="activity-picker"/);
-  assert.match(page, /activity-\$\{selectedActivity\.id\}/);
+  assert.match(preview, /activity-\$\{selectedActivity\.id\}/);
   assert.match(page, /aria-label="Invitation studio view"/);
   assert.match(page, /template-swatches/);
-  assert.match(page, /preview-for-you/);
-  assert.match(page, /Open recipient view/);
-  assert.match(page, /I’d love to/);
-  assert.match(page, /Adjust it/);
-  assert.match(page, /Not this time/);
+  assert.match(preview, /preview-for-you/);
+  assert.match(page, /Create invitation/);
+  assert.match(page, /Your private response page/);
+  assert.match(preview, /I’d love to/);
+  assert.match(preview, /Adjust it/);
+  assert.match(preview, /Not this time/);
+  assert.match(recipientPage, /Send my response/);
+  assert.match(recipientPage, /maxLength=\{320\}/);
+  assert.match(statusPage, /Refresh response/);
+  assert.match(statusPage, /setInterval/);
+  assert.match(database, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(database, /INSERT OR IGNORE INTO invitation_responses/);
+  assert.match(database, /status_token_hash/);
+  assert.match(schema, /uniqueIndex\("invitations_public_token_unique"\)/);
+  assert.match(schema, /invitationId: text\("invitation_id"\)\s*\.primaryKey\(\)/);
+  assert.match(hosting, /"d1": "DB"/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /\.activity-coffee/);
   assert.match(css, /\.activity-dinner/);
@@ -75,4 +105,5 @@ test("keeps the phase-one product contract in source", async () => {
   assert.match(layout, /Caveat/);
   assert.match(packageJson, /"lucide-react"/);
   assert.doesNotMatch(page, /WHATSAPP_NUMBER|EMAIL_ADDRESS|SMS_NUMBER/);
+  assert.doesNotMatch(database, /status_token\s+TEXT/i);
 });

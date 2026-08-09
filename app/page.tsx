@@ -1,303 +1,67 @@
 "use client";
 
 import {
-  CalendarDays,
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clapperboard,
-  Clock3,
   Coffee,
   Compass,
+  Copy,
+  ExternalLink,
   Eye,
   Footprints,
   Heart,
+  Link2,
+  LoaderCircle,
+  LockKeyhole,
   MapPin,
-  MessageCircleHeart,
   MoonStar,
-  PartyPopper,
   PencilLine,
+  Share2,
   Sparkles,
   UtensilsCrossed,
   WandSparkles,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import { InvitationPreview } from "@/app/components/invitation-preview";
+import {
+  activities,
+  defaultDraft,
+  getActivity,
+  templates,
+  type ActivityId,
+  type InvitationDraft,
+  type ResponseChoice,
+  type TemplateId,
+} from "@/app/lib/invitation";
 
-type TemplateId = "playful" | "sincere";
-type ResponseChoice = "yes" | "adjust" | "no";
-type ActivityId = "coffee" | "dinner" | "walk" | "movie" | "outing" | "custom";
 type MobileView = "editor" | "preview";
-
-type InvitationDraft = {
-  fromName: string;
-  toName: string;
-  activity: ActivityId;
-  customActivity: string;
-  place: string;
-  date: string;
-  time: string;
-  message: string;
-};
-
-const templates: Array<{
-  id: TemplateId;
-  name: string;
-  description: string;
-  icon: typeof Sparkles;
-}> = [
-  {
-    id: "playful",
-    name: "Warm & playful",
-    description: "Bright, cheeky, and full of little sparks.",
-    icon: Sparkles,
-  },
-  {
-    id: "sincere",
-    name: "Soft & sincere",
-    description: "Calm, thoughtful, and quietly romantic.",
-    icon: MoonStar,
-  },
-];
 
 const steps = ["Feeling", "The plan", "Your note"];
 
-const activities: Array<{
-  id: ActivityId;
-  label: string;
-  invitationPhrase: string;
-  icon: typeof Coffee;
-}> = [
-  { id: "coffee", label: "Coffee", invitationPhrase: "coffee", icon: Coffee },
-  {
-    id: "dinner",
-    label: "Dinner",
-    invitationPhrase: "dinner together",
-    icon: UtensilsCrossed,
-  },
-  {
-    id: "walk",
-    label: "A walk",
-    invitationPhrase: "a slow walk",
-    icon: Footprints,
-  },
-  { id: "movie", label: "Movie", invitationPhrase: "a movie", icon: Clapperboard },
-  {
-    id: "outing",
-    label: "Tiny outing",
-    invitationPhrase: "a tiny outing",
-    icon: Compass,
-  },
-  {
-    id: "custom",
-    label: "Custom plan",
-    invitationPhrase: "a little plan",
-    icon: Sparkles,
-  },
-];
-
-const defaultDraft: InvitationDraft = {
-  fromName: "Alex",
-  toName: "Sam",
-  activity: "coffee",
-  customActivity: "",
-  place: "That cozy place we keep talking about",
-  date: "",
-  time: "18:30",
-  message:
-    "No grand occasion. I would just really like a little time with you.",
+const templateIcons: Record<TemplateId, LucideIcon> = {
+  playful: Sparkles,
+  sincere: MoonStar,
 };
 
-function formatDate(value: string) {
-  if (!value) return "A day we choose together";
+const activityIcons: Record<ActivityId, LucideIcon> = {
+  coffee: Coffee,
+  dinner: UtensilsCrossed,
+  walk: Footprints,
+  movie: Clapperboard,
+  outing: Compass,
+  custom: Sparkles,
+};
 
-  return new Intl.DateTimeFormat("en", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(`${value}T12:00:00`));
-}
-
-function formatTime(value: string) {
-  if (!value) return "Whenever feels right";
-
-  const [hours, minutes] = value.split(":").map(Number);
-  const suffix = hours >= 12 ? "PM" : "AM";
-  const displayHours = hours % 12 || 12;
-  return `${displayHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
-}
-
-function responseCopy(choice: ResponseChoice, fromName: string) {
-  if (choice === "yes") {
-    const owner = fromName.trim() ? `${fromName.trim()}’s` : "their";
-
-    return {
-      icon: PartyPopper,
-      title: `That just made ${owner} day.`,
-      text: "A tiny yes can make a very ordinary day feel special.",
-    };
-  }
-
-  if (choice === "adjust") {
-    return {
-      icon: MessageCircleHeart,
-      title: "A little planning together sounds perfect.",
-      text: "The answer is warm, and the details can wait for a conversation.",
-    };
-  }
-
-  return {
-    icon: Heart,
-    title: "Thank you for answering honestly.",
-    text: "Kind invitations should always leave room for a kind no.",
-  };
-}
-
-function getActivity(id: ActivityId) {
-  return activities.find((activity) => activity.id === id) ?? activities[0];
-}
-
-function InvitationPreview({
-  draft,
-  templateId,
-  interactive = false,
-  response,
-  onResponse,
-}: {
-  draft: InvitationDraft;
-  templateId: TemplateId;
-  interactive?: boolean;
-  response: ResponseChoice | null;
-  onResponse?: (choice: ResponseChoice) => void;
-}) {
-  const selectedActivity = getActivity(draft.activity);
-  const activityPhrase =
-    draft.activity === "custom"
-      ? draft.customActivity.trim() || selectedActivity.invitationPhrase
-      : selectedActivity.invitationPhrase;
-  const ActivityIcon = selectedActivity.icon;
-  const answer = response ? responseCopy(response, draft.fromName) : null;
-  const AnswerIcon = answer?.icon;
-
-  return (
-    <article
-      className={`invitation-preview template-${templateId}`}
-      aria-label={`${templates.find((template) => template.id === templateId)?.name} invitation preview`}
-    >
-      <div className="preview-decoration" aria-hidden="true">
-        {templateId === "playful" ? (
-          <>
-            <span className="paper-mark paper-mark-one" />
-            <span className="paper-mark paper-mark-two" />
-            <span className="paper-mark paper-mark-three" />
-            <span className="paper-mark paper-mark-four" />
-          </>
-        ) : (
-          <>
-            <MoonStar className="quiet-moon" strokeWidth={1.5} />
-            <Heart className="quiet-heart" fill="currentColor" strokeWidth={1.5} />
-          </>
-        )}
-      </div>
-
-      <header className="preview-header">
-        <span className="preview-stamp">
-          {templateId === "playful" ? (
-            <Sparkles size={15} aria-hidden="true" />
-          ) : (
-            <Heart size={15} aria-hidden="true" />
-          )}
-          A little invitation from {draft.fromName || "someone special"}
-        </span>
-        <span className="preview-for-you">
-          <Heart size={13} fill="currentColor" aria-hidden="true" />
-          just for you
-        </span>
-      </header>
-
-      <div className="preview-copy">
-        <div
-          key={`${templateId}-${selectedActivity.id}`}
-          className={`preview-illustration activity-${selectedActivity.id}`}
-          aria-hidden="true"
-        >
-          <span className="activity-symbol">
-            <ActivityIcon size={38} strokeWidth={1.7} />
-          </span>
-          <span className="activity-mark activity-mark-one" />
-          <span className="activity-mark activity-mark-two" />
-        </div>
-        <p className="preview-whisper">
-          {templateId === "playful"
-            ? "A tiny plan with lovely potential"
-            : "A quiet question, meant just for you"}
-        </p>
-        <p className="preview-greeting">Hey {draft.toName || "you"},</p>
-        <h2>Would you join me for {activityPhrase}?</h2>
-        <p className="preview-message">“{draft.message || "I saved this moment for you."}”</p>
-      </div>
-
-      <dl className="preview-details">
-        <div>
-          <CalendarDays size={18} aria-hidden="true" />
-          <dt>Day</dt>
-          <dd>{formatDate(draft.date)}</dd>
-        </div>
-        <div>
-          <Clock3 size={18} aria-hidden="true" />
-          <dt>Time</dt>
-          <dd>{formatTime(draft.time)}</dd>
-        </div>
-        <div>
-          <MapPin size={18} aria-hidden="true" />
-          <dt>Place</dt>
-          <dd>{draft.place || "Somewhere we both like"}</dd>
-        </div>
-      </dl>
-
-      <div className="preview-response" aria-live="polite">
-        {answer && AnswerIcon ? (
-          <div className={`response-result response-${response}`}>
-            <AnswerIcon size={28} aria-hidden="true" />
-            <div>
-              <h3>{answer.title}</h3>
-              <p>{answer.text}</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <p className="response-prompt">What does your heart say?</p>
-            <div className="response-actions">
-              <button
-                type="button"
-                disabled={!interactive}
-                onClick={() => onResponse?.("yes")}
-              >
-                <Check size={17} aria-hidden="true" />
-                I’d love to
-              </button>
-              <button
-                type="button"
-                disabled={!interactive}
-                onClick={() => onResponse?.("adjust")}
-              >
-                <MessageCircleHeart size={17} aria-hidden="true" />
-                Adjust it
-              </button>
-              <button
-                type="button"
-                disabled={!interactive}
-                onClick={() => onResponse?.("no")}
-              >
-                Not this time
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </article>
-  );
-}
+type CreatedInvitation = {
+  shareUrl: string;
+  statusUrl: string;
+  expiresAt: string;
+};
 
 export default function Home() {
   const [step, setStep] = useState(0);
@@ -307,18 +71,24 @@ export default function Home() {
   const [showRecipientView, setShowRecipientView] = useState(false);
   const [previewResponse, setPreviewResponse] =
     useState<ResponseChoice | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationError, setCreationError] = useState("");
+  const [createdInvitation, setCreatedInvitation] =
+    useState<CreatedInvitation | null>(null);
+  const [copiedLink, setCopiedLink] = useState<"share" | "status" | null>(null);
 
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === templateId) ?? templates[0],
     [templateId],
   );
   const selectedActivity = useMemo(() => getActivity(draft.activity), [draft.activity]);
-  const SelectedTemplateIcon = selectedTemplate.icon;
+  const SelectedTemplateIcon = templateIcons[selectedTemplate.id];
 
   function updateDraft<Key extends keyof InvitationDraft>(
     key: Key,
     value: InvitationDraft[Key],
   ) {
+    setCreationError("");
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
@@ -332,6 +102,83 @@ export default function Home() {
     window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
+  }
+
+  function validateDraft() {
+    if (!draft.fromName.trim() || !draft.toName.trim()) {
+      return { step: 0, message: "Add both names before creating the invitation." };
+    }
+    if (draft.activity === "custom" && !draft.customActivity.trim()) {
+      return { step: 1, message: "Give your custom plan a name." };
+    }
+    if (!draft.place.trim() || !draft.date || !draft.time) {
+      return { step: 1, message: "Add the place, date, and time before creating." };
+    }
+    if (!draft.message.trim()) {
+      return { step: 2, message: "Add a short personal note before creating." };
+    }
+
+    return null;
+  }
+
+  async function createInvitation() {
+    const validation = validateDraft();
+    if (validation) {
+      setStep(validation.step);
+      setMobileView("editor");
+      setCreationError(validation.message);
+      return;
+    }
+
+    setIsCreating(true);
+    setCreationError("");
+
+    try {
+      const response = await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...draft, templateId }),
+      });
+      const result = (await response.json()) as CreatedInvitation & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(result.error || "The invitation could not be created just now.");
+      }
+
+      setCreatedInvitation(result);
+      setCopiedLink(null);
+    } catch (error) {
+      setCreationError(
+        error instanceof Error ? error.message : "The invitation could not be created just now.",
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function copyLink(kind: "share" | "status", value: string) {
+    await navigator.clipboard.writeText(value);
+    setCopiedLink(kind);
+    window.setTimeout(() => setCopiedLink((current) => (current === kind ? null : current)), 1800);
+  }
+
+  async function shareInvitation() {
+    if (!createdInvitation) return;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${draft.fromName} has a little invitation for ${draft.toName}`,
+          text: "I made a little invitation for you.",
+          url: createdInvitation.shareUrl,
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+
+    await copyLink("share", createdInvitation.shareUrl);
   }
 
   return (
@@ -411,6 +258,13 @@ export default function Home() {
               ))}
             </nav>
 
+            {creationError && (
+              <div className="form-error" role="alert">
+                <span aria-hidden="true">!</span>
+                {creationError}
+              </div>
+            )}
+
             <div className="min-h-[420px]">
               {step === 0 && (
                 <div className="form-section">
@@ -421,7 +275,7 @@ export default function Home() {
 
                   <div className="template-picker" role="radiogroup" aria-label="Invitation feeling">
                     {templates.map((template) => {
-                      const Icon = template.icon;
+                      const Icon = templateIcons[template.id];
                       const selected = template.id === templateId;
                       return (
                         <button
@@ -462,6 +316,7 @@ export default function Home() {
                         className="field-input"
                         value={draft.fromName}
                         maxLength={40}
+                        required
                         onChange={(event) => updateDraft("fromName", event.target.value)}
                         placeholder="Alex"
                       />
@@ -472,6 +327,7 @@ export default function Home() {
                         className="field-input"
                         value={draft.toName}
                         maxLength={40}
+                        required
                         onChange={(event) => updateDraft("toName", event.target.value)}
                         placeholder="Sam"
                       />
@@ -491,7 +347,7 @@ export default function Home() {
                     <legend>What are you inviting them to?</legend>
                     <div className="activity-picker">
                       {activities.map((activity) => {
-                        const Icon = activity.icon;
+                        const Icon = activityIcons[activity.id];
                         const selected = activity.id === draft.activity;
 
                         return (
@@ -520,6 +376,7 @@ export default function Home() {
                         className="field-input"
                         value={draft.customActivity}
                         maxLength={60}
+                        required
                         onChange={(event) => updateDraft("customActivity", event.target.value)}
                         placeholder="A sunset picnic"
                       />
@@ -534,6 +391,7 @@ export default function Home() {
                         className="field-input"
                         value={draft.place}
                         maxLength={100}
+                        required
                         onChange={(event) => updateDraft("place", event.target.value)}
                         placeholder="A favorite cafe or meeting spot"
                       />
@@ -547,6 +405,7 @@ export default function Home() {
                         type="date"
                         className="field-input"
                         value={draft.date}
+                        required
                         onChange={(event) => updateDraft("date", event.target.value)}
                       />
                     </label>
@@ -556,6 +415,7 @@ export default function Home() {
                         type="time"
                         className="field-input"
                         value={draft.time}
+                        required
                         onChange={(event) => updateDraft("time", event.target.value)}
                       />
                     </label>
@@ -576,6 +436,7 @@ export default function Home() {
                       className="field-input min-h-36 resize-none"
                       value={draft.message}
                       maxLength={220}
+                      required
                       onChange={(event) => updateDraft("message", event.target.value)}
                       placeholder="What would you really like them to know?"
                     />
@@ -597,10 +458,25 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <button type="button" className="primary-action" onClick={openRecipientView}>
-                    <WandSparkles size={19} aria-hidden="true" />
-                    Open recipient view
-                  </button>
+                  <div className="creation-actions">
+                    <button
+                      type="button"
+                      className="primary-action"
+                      onClick={createInvitation}
+                      disabled={isCreating}
+                    >
+                      {isCreating ? (
+                        <LoaderCircle className="spin-icon" size={19} aria-hidden="true" />
+                      ) : (
+                        <Link2 size={19} aria-hidden="true" />
+                      )}
+                      {isCreating ? "Creating…" : "Create invitation"}
+                    </button>
+                    <button type="button" className="secondary-action" onClick={openRecipientView}>
+                      <Eye size={18} aria-hidden="true" />
+                      Preview first
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -695,6 +571,104 @@ export default function Home() {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {createdInvitation && (
+        <div
+          className="share-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invitation-ready-title"
+        >
+          <section className="share-dialog">
+            <button
+              type="button"
+              className="icon-button share-dialog-close"
+              onClick={() => setCreatedInvitation(null)}
+              aria-label="Close invitation links"
+            >
+              <X size={20} aria-hidden="true" />
+            </button>
+
+            <div className="share-success-mark" aria-hidden="true">
+              <CheckCircle2 size={30} />
+            </div>
+            <p className="romantic-kicker">Ready when you are</p>
+            <h2 id="invitation-ready-title">Your invitation is ready to send.</h2>
+            <p className="share-dialog-intro">
+              Share the first link with {draft.toName}. Keep the second one private so only you
+              can see their response.
+            </p>
+
+            <div className="share-link-section">
+              <div className="share-link-heading">
+                <span className="share-link-icon share-link-icon-public">
+                  <Share2 size={18} aria-hidden="true" />
+                </span>
+                <div>
+                  <strong>Send this to {draft.toName}</strong>
+                  <span>They can open it without signing in.</span>
+                </div>
+              </div>
+              <div className="link-copy-row">
+                <input readOnly value={createdInvitation.shareUrl} aria-label="Recipient link" />
+                <button
+                  type="button"
+                  onClick={() => copyLink("share", createdInvitation.shareUrl)}
+                >
+                  {copiedLink === "share" ? (
+                    <Check size={17} aria-hidden="true" />
+                  ) : (
+                    <Copy size={17} aria-hidden="true" />
+                  )}
+                  {copiedLink === "share" ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <button type="button" className="primary-action share-native-action" onClick={shareInvitation}>
+                <Share2 size={18} aria-hidden="true" />
+                Share invitation
+              </button>
+            </div>
+
+            <div className="share-link-section share-link-private">
+              <div className="share-link-heading">
+                <span className="share-link-icon share-link-icon-private">
+                  <LockKeyhole size={18} aria-hidden="true" />
+                </span>
+                <div>
+                  <strong>Your private response page</strong>
+                  <span>Save this link. Anyone with it can see the answer.</span>
+                </div>
+              </div>
+              <div className="link-copy-row">
+                <input readOnly value={createdInvitation.statusUrl} aria-label="Private status link" />
+                <button
+                  type="button"
+                  onClick={() => copyLink("status", createdInvitation.statusUrl)}
+                >
+                  {copiedLink === "status" ? (
+                    <Check size={17} aria-hidden="true" />
+                  ) : (
+                    <Copy size={17} aria-hidden="true" />
+                  )}
+                  {copiedLink === "status" ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <a href={createdInvitation.statusUrl} target="_blank" rel="noreferrer">
+                Open private status page
+                <ExternalLink size={16} aria-hidden="true" />
+              </a>
+            </div>
+
+            <p className="share-expiry-note">
+              Links stay active until {new Date(createdInvitation.expiresAt).toLocaleDateString("en", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}.
+            </p>
+          </section>
         </div>
       )}
     </main>
