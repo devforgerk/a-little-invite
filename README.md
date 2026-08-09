@@ -51,6 +51,10 @@ and use `a-little-invite` as the project name if it is available. Vercel reads
 `vercel.json`, skips the application build, and forwards every route to the
 working origin without changing the address visible in the browser.
 
+The `vercel-static` directory deliberately has no `index.html`. This lets the
+root request reach the external rewrite instead of being handled as a local
+static page.
+
 The composer and private status page rewrite returned links to the browser's
 current origin. Links copied from the Vercel deployment therefore stay on the
 personal Vercel address.
