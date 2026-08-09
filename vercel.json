@@ -6,6 +6,10 @@
   "outputDirectory": "vercel-static",
   "rewrites": [
     {
+      "source": "/",
+      "destination": "https://a-little-invite.janohealth.chatgpt.site/"
+    },
+    {
       "source": "/:path*",
       "destination": "https://a-little-invite.janohealth.chatgpt.site/:path*"
     }
