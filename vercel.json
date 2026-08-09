@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "true",
+  "outputDirectory": "vercel-static",
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": "https://a-little-invite.janohealth.chatgpt.site/:path*"
+    }
+  ]
+}

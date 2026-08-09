@@ -40,6 +40,21 @@ Create a production build with:
 npm run build
 ```
 
+## Free personal URL
+
+The repository includes a small Vercel proxy configuration. It gives the app a
+free personal `*.vercel.app` address while the existing Sites deployment keeps
+running the D1-backed invitation and response API.
+
+Import this repository in Vercel, keep the project root as the repository root,
+and use `a-little-invite` as the project name if it is available. Vercel reads
+`vercel.json`, skips the application build, and forwards every route to the
+working origin without changing the address visible in the browser.
+
+The composer and private status page rewrite returned links to the browser's
+current origin. Links copied from the Vercel deployment therefore stay on the
+personal Vercel address.
+
 Generate a migration after changing `db/schema.ts` with:
 
 ```bash

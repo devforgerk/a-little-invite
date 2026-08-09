@@ -26,6 +26,7 @@ import {
   type InvitationData,
   type ResponseChoice,
 } from "@/app/lib/invitation";
+import { withPublicOrigin } from "@/app/lib/public-url";
 
 type StatusPayload = {
   invitation: InvitationData;
@@ -65,7 +66,10 @@ export default function PrivateStatusPage() {
         });
         const result = (await response.json()) as StatusPayload & { error?: string };
         if (!response.ok) throw new Error(result.error || "The response status could not be opened.");
-        setPayload(result);
+        setPayload({
+          ...result,
+          shareUrl: withPublicOrigin(result.shareUrl, window.location.origin),
+        });
         setLastChecked(new Date());
       } catch (error) {
         setLoadError(

@@ -38,6 +38,7 @@ import {
   type ResponseChoice,
   type TemplateId,
 } from "@/app/lib/invitation";
+import { withPublicOrigin } from "@/app/lib/public-url";
 
 type MobileView = "editor" | "preview";
 
@@ -145,7 +146,11 @@ export default function Home() {
         throw new Error(result.error || "The invitation could not be created just now.");
       }
 
-      setCreatedInvitation(result);
+      setCreatedInvitation({
+        ...result,
+        shareUrl: withPublicOrigin(result.shareUrl, window.location.origin),
+        statusUrl: withPublicOrigin(result.statusUrl, window.location.origin),
+      });
       setCopiedLink(null);
     } catch (error) {
       setCreationError(
