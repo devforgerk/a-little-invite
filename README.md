@@ -8,12 +8,12 @@ walk, or a simple outing with a little more feeling than a regular message.
 The app now supports the complete no-account response loop:
 
 - create an invitation in the three-step composer;
-- offer one or several activity ideas for the recipient to choose from;
+- offer one or several activity ideas for the recipient to select one or more of;
 - suggest a fixed time or ask the recipient for their preferred time;
 - receive a public recipient link and a separate private status link;
 - share the recipient link manually through WhatsApp, email, or any messenger;
 - let the recipient accept, suggest an adjustment, or decline with an optional note;
-- see the saved answer, chosen activity, and preferred time on the private status page; and
+- see the saved answer, chosen activities, and preferred time on the private status page; and
 - prevent later submissions from replacing the first response.
 
 The experience also includes:

@@ -1,0 +1,1 @@
+ALTER TABLE `invitation_plans` ADD `selected_activities` text;

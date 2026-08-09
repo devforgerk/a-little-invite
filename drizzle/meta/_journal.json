@@ -15,6 +15,13 @@
       "when": 1786273696650,
       "tag": "0001_black_peter_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786274673175,
+      "tag": "0002_worthless_tarot",
+      "breakpoints": true
     }
   ]
 }

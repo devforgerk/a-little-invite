@@ -44,6 +44,7 @@ type InvitationRow = {
   responded_at?: number | null;
   activity_options?: string | null;
   selected_activity?: ActivityId | null;
+  selected_activities?: string | null;
   preferred_time?: string | null;
 };
 
@@ -59,6 +60,7 @@ export type StatusView = {
   response: {
     choice: ResponseChoice;
     note: string;
+    selectedActivities: ActivityId[];
     selectedActivity: ActivityId | null;
     preferredTime: string;
     respondedAt: string;
@@ -84,7 +86,7 @@ async function initializeSchema() {
     await database.batch([
       database.prepare("SELECT 1 FROM invitations LIMIT 1"),
       database.prepare("SELECT 1 FROM invitation_responses LIMIT 1"),
-      database.prepare("SELECT 1 FROM invitation_plans LIMIT 1"),
+      database.prepare("SELECT selected_activities FROM invitation_plans LIMIT 1"),
     ]);
     return;
   } catch {
@@ -139,10 +141,29 @@ async function initializeSchema() {
           selected_activity IS NULL OR
           selected_activity IN ('coffee', 'dinner', 'walk', 'movie', 'outing', 'custom')
         ),
+        selected_activities TEXT,
         preferred_time TEXT
       )
     `),
   ]);
+
+  const planColumns = await database
+    .prepare("PRAGMA table_info(invitation_plans)")
+    .all<{ name: string }>();
+  if (!planColumns.results.some((column) => column.name === "selected_activities")) {
+    try {
+      await database
+        .prepare("ALTER TABLE invitation_plans ADD COLUMN selected_activities TEXT")
+        .run();
+    } catch (error) {
+      const currentColumns = await database
+        .prepare("PRAGMA table_info(invitation_plans)")
+        .all<{ name: string }>();
+      if (!currentColumns.results.some((column) => column.name === "selected_activities")) {
+        throw error;
+      }
+    }
+  }
 }
 
 async function ensureSchema() {
@@ -205,6 +226,24 @@ function readActivities(body: Record<string, unknown>): ActivityId[] {
   return [...new Set(selected)];
 }
 
+function readResponseActivities(body: Record<string, unknown>): ActivityId[] {
+  const legacyActivity = body.selectedActivity;
+  const value =
+    body.selectedActivities ??
+    (legacyActivity === null || legacyActivity === undefined || legacyActivity === ""
+      ? []
+      : [legacyActivity]);
+
+  if (!Array.isArray(value) || value.length > activityIds.length) {
+    throw new InvitationValidationError("Preferred activities are not valid.");
+  }
+
+  const selected = value.map((activity) =>
+    readEnum(activity, activityIds, "Preferred activity"),
+  );
+  return [...new Set(selected)];
+}
+
 function isRealDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T12:00:00Z`);
@@ -248,6 +287,7 @@ export function parseInvitationInput(value: unknown): InvitationInput {
 
 export function parseResponseInput(value: unknown) {
   const body = readObject(value);
+  const selectedActivities = readResponseActivities(body);
   const preferredTime = readText(body.preferredTime ?? "", "Preferred time", 5, {
     required: false,
   });
@@ -259,10 +299,7 @@ export function parseResponseInput(value: unknown) {
   return {
     choice: readEnum(body.choice, responseChoices, "Response"),
     note: readText(body.note ?? "", "Response note", 320, { required: false }),
-    selectedActivity:
-      body.selectedActivity === null || body.selectedActivity === undefined || body.selectedActivity === ""
-        ? null
-        : readEnum(body.selectedActivity, activityIds, "Preferred activity"),
+    selectedActivities,
     preferredTime,
   };
 }
@@ -314,6 +351,28 @@ function readStoredActivities(activityOptions: string | null | undefined, fallba
   return [fallback];
 }
 
+function readStoredSelectedActivities(
+  selectedActivities: string | null | undefined,
+  fallback: ActivityId | null | undefined,
+) {
+  if (selectedActivities !== null && selectedActivities !== undefined) {
+    try {
+      const stored = JSON.parse(selectedActivities) as unknown;
+      if (Array.isArray(stored)) {
+        const valid = stored.filter(
+          (activity): activity is ActivityId =>
+            typeof activity === "string" && activityIds.includes(activity as ActivityId),
+        );
+        return [...new Set(valid)];
+      }
+    } catch {
+      // Fall back to the original single response value for older records.
+    }
+  }
+
+  return fallback ? [fallback] : [];
+}
+
 function activitiesFor(row: InvitationRow): ActivityId[] {
   return readStoredActivities(row.activity_options, row.activity);
 }
@@ -357,6 +416,7 @@ const invitationSelect = `
     r.responded_at,
     p.activity_options,
     p.selected_activity,
+    p.selected_activities,
     p.preferred_time
   FROM invitations i
   LEFT JOIN invitation_responses r ON r.invitation_id = i.id
@@ -428,13 +488,19 @@ export async function getPublicInvitation(publicToken: string) {
 
   if (!row) return null;
 
+  const selectedActivities = readStoredSelectedActivities(
+    row.selected_activities,
+    row.selected_activity,
+  );
+
   return {
     invitation: invitationFor(row),
     responseChoice: row.response_choice,
     response: row.response_choice
       ? {
           choice: row.response_choice,
-          selectedActivity: row.selected_activity ?? null,
+          selectedActivities,
+          selectedActivity: selectedActivities[0] ?? null,
           preferredTime: row.preferred_time ?? "",
         }
       : null,
@@ -451,6 +517,11 @@ export async function getStatusInvitation(statusToken: string): Promise<StatusVi
 
   if (!row) return null;
 
+  const selectedActivities = readStoredSelectedActivities(
+    row.selected_activities,
+    row.selected_activity,
+  );
+
   return {
     invitation: invitationFor(row),
     publicToken: row.public_token,
@@ -459,7 +530,8 @@ export async function getStatusInvitation(statusToken: string): Promise<StatusVi
         ? {
             choice: row.response_choice,
             note: row.response_note ?? "",
-            selectedActivity: row.selected_activity ?? null,
+            selectedActivities,
+            selectedActivity: selectedActivities[0] ?? null,
             preferredTime: row.preferred_time ?? "",
             respondedAt: new Date(row.responded_at).toISOString(),
           }
@@ -472,7 +544,7 @@ export async function submitInvitationResponse(
   response: {
     choice: ResponseChoice;
     note: string;
-    selectedActivity: ActivityId | null;
+    selectedActivities: ActivityId[];
     preferredTime: string;
   },
 ) {
@@ -504,18 +576,18 @@ export async function submitInvitationResponse(
     invitation.activity_options,
     invitation.activity,
   );
-  let selectedActivity = response.choice === "no" ? null : response.selectedActivity;
+  let selectedActivities = response.choice === "no" ? [] : response.selectedActivities;
   const preferredTime =
     response.choice === "no" || invitation.event_time ? "" : response.preferredTime;
 
-  if (selectedActivity && !offeredActivities.includes(selectedActivity)) {
-    throw new InvitationValidationError("Choose one of the activities in this invitation.");
+  if (selectedActivities.some((activity) => !offeredActivities.includes(activity))) {
+    throw new InvitationValidationError("Choose only activities in this invitation.");
   }
-  if (response.choice === "yes" && offeredActivities.length > 1 && !selectedActivity) {
-    throw new InvitationValidationError("Choose the activity you would prefer.");
+  if (response.choice === "yes" && offeredActivities.length > 1 && selectedActivities.length === 0) {
+    throw new InvitationValidationError("Choose at least one activity you would prefer.");
   }
   if (response.choice !== "no" && offeredActivities.length === 1) {
-    selectedActivity = offeredActivities[0];
+    selectedActivities = [offeredActivities[0]];
   }
   if (response.choice === "yes" && !invitation.event_time && !preferredTime) {
     throw new InvitationValidationError("Choose the time you would prefer.");
@@ -531,21 +603,23 @@ export async function submitInvitationResponse(
     database
       .prepare(`
         INSERT INTO invitation_plans (
-          invitation_id, activity_options, selected_activity, preferred_time
+          invitation_id, activity_options, selected_activity, selected_activities, preferred_time
         )
-        SELECT ?, ?, ?, ?
+        SELECT ?, ?, ?, ?, ?
         WHERE EXISTS (
           SELECT 1 FROM invitation_responses
           WHERE invitation_id = ? AND responded_at = ?
         )
         ON CONFLICT(invitation_id) DO UPDATE SET
           selected_activity = excluded.selected_activity,
+          selected_activities = excluded.selected_activities,
           preferred_time = excluded.preferred_time
       `)
       .bind(
         invitation.id,
         JSON.stringify(offeredActivities),
-        selectedActivity,
+        selectedActivities[0] ?? null,
+        JSON.stringify(selectedActivities),
         preferredTime || null,
         invitation.id,
         respondedAt,
@@ -570,7 +644,8 @@ export async function submitInvitationResponse(
     outcome: "saved" as const,
     response: {
       choice: response.choice,
-      selectedActivity,
+      selectedActivities,
+      selectedActivity: selectedActivities[0] ?? null,
       preferredTime,
       respondedAt: new Date(respondedAt).toISOString(),
     },

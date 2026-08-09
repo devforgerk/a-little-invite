@@ -51,5 +51,6 @@ export const invitationPlans = sqliteTable("invitation_plans", {
   selectedActivity: text("selected_activity", {
     enum: ["coffee", "dinner", "walk", "movie", "outing", "custom"],
   }),
+  selectedActivities: text("selected_activities"),
   preferredTime: text("preferred_time"),
 });

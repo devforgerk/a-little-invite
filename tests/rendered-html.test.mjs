@@ -111,6 +111,8 @@ test("keeps the invitation and response workflow contract in source", async () =
   assert.match(recipientPage, /Send my response/);
   assert.match(recipientPage, /maxLength=\{320\}/);
   assert.match(recipientPage, /response-activity-picker/);
+  assert.match(recipientPage, /Which plans feel good/);
+  assert.match(recipientPage, /selectedActivities\.includes/);
   assert.match(recipientPage, /Your preferred time/);
   assert.match(statusPage, /Refresh response/);
   assert.match(statusPage, /status-answer-preferences/);
@@ -121,13 +123,15 @@ test("keeps the invitation and response workflow contract in source", async () =
   assert.match(database, /crypto\.subtle\.digest\("SHA-256"/);
   assert.match(database, /INSERT OR IGNORE INTO invitation_responses/);
   assert.match(database, /CREATE TABLE IF NOT EXISTS invitation_plans/);
-  assert.match(database, /Choose the activity you would prefer/);
+  assert.match(database, /selected_activities/);
+  assert.match(database, /Choose at least one activity you would prefer/);
   assert.match(database, /Choose the time you would prefer/);
   assert.match(database, /SELECT 1 FROM invitations LIMIT 1/);
   assert.match(database, /status_token_hash/);
   assert.match(schema, /uniqueIndex\("invitations_public_token_unique"\)/);
   assert.match(schema, /invitationId: text\("invitation_id"\)\s*\.primaryKey\(\)/);
   assert.match(schema, /invitationPlans/);
+  assert.match(schema, /selectedActivities: text\("selected_activities"\)/);
   assert.match(hosting, /"d1": "DB"/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /\.activity-coffee/);

@@ -18,6 +18,7 @@ type PublicInvitationPayload = {
   responseChoice: ResponseChoice | null;
   response: {
     choice: ResponseChoice;
+    selectedActivities?: ActivityId[];
     selectedActivity: ActivityId | null;
     preferredTime: string;
   } | null;
@@ -45,7 +46,7 @@ export default function RecipientInvitationPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedChoice, setSelectedChoice] = useState<ResponseChoice | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<ActivityId | null>(null);
+  const [selectedActivities, setSelectedActivities] = useState<ActivityId[]>([]);
   const [preferredTime, setPreferredTime] = useState("");
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,10 +78,10 @@ export default function RecipientInvitationPage() {
   function chooseResponse(choice: ResponseChoice) {
     setSelectedChoice(choice);
     if (choice === "no") {
-      setSelectedActivity(null);
+      setSelectedActivities([]);
       setPreferredTime("");
     } else if (payload?.invitation.activities.length === 1) {
-      setSelectedActivity(payload.invitation.activities[0]);
+      setSelectedActivities([payload.invitation.activities[0]]);
     }
     setSubmitError("");
     window.requestAnimationFrame(() => {
@@ -98,9 +99,9 @@ export default function RecipientInvitationPage() {
     if (
       selectedChoice === "yes" &&
       payload?.invitation.activities.length !== 1 &&
-      !selectedActivity
+      selectedActivities.length === 0
     ) {
-      setSubmitError("Choose the plan that sounds best to you.");
+      setSubmitError("Choose at least one plan that sounds good to you.");
       return;
     }
     if (
@@ -122,12 +123,13 @@ export default function RecipientInvitationPage() {
         body: JSON.stringify({
           choice: selectedChoice,
           note,
-          selectedActivity,
+          selectedActivities,
           preferredTime,
         }),
       });
       const result = (await response.json()) as {
         choice?: ResponseChoice;
+        selectedActivities?: ActivityId[];
         selectedActivity?: ActivityId | null;
         preferredTime?: string;
         error?: string;
@@ -145,14 +147,21 @@ export default function RecipientInvitationPage() {
               responseChoice: result.choice ?? selectedChoice,
               response: {
                 choice: result.choice ?? selectedChoice,
-                selectedActivity: result.selectedActivity ?? selectedActivity,
+                selectedActivities:
+                  result.selectedActivities ??
+                  (result.selectedActivity ? [result.selectedActivity] : selectedActivities),
+                selectedActivity:
+                  result.selectedActivity ??
+                  result.selectedActivities?.[0] ??
+                  selectedActivities[0] ??
+                  null,
                 preferredTime: result.preferredTime ?? preferredTime,
               },
             }
           : current,
       );
       setSelectedChoice(null);
-      setSelectedActivity(null);
+      setSelectedActivities([]);
       setPreferredTime("");
     } catch (error) {
       setSubmitError(
@@ -210,12 +219,14 @@ export default function RecipientInvitationPage() {
               {selectedChoice !== "no" && payload.invitation.activities.length > 1 && (
                 <fieldset className="response-preference-fieldset">
                   <legend>
-                    Which plan feels best?
-                    {selectedChoice === "adjust" && <small>Optional</small>}
+                    Which plans feel good?
+                    <small>
+                      {selectedChoice === "adjust" ? "Optional · choose any" : "Choose one or more"}
+                    </small>
                   </legend>
                   <div className="response-activity-picker">
                     {payload.invitation.activities.map((activity) => {
-                      const selected = selectedActivity === activity;
+                      const selected = selectedActivities.includes(activity);
                       return (
                         <button
                           key={activity}
@@ -223,7 +234,11 @@ export default function RecipientInvitationPage() {
                           className={selected ? "is-selected" : ""}
                           aria-pressed={selected}
                           onClick={() => {
-                            setSelectedActivity(activity);
+                            setSelectedActivities((current) =>
+                              current.includes(activity)
+                                ? current.filter((item) => item !== activity)
+                                : [...current, activity],
+                            );
                             setSubmitError("");
                           }}
                         >
@@ -276,7 +291,7 @@ export default function RecipientInvitationPage() {
                   className="secondary-action"
                   onClick={() => {
                     setSelectedChoice(null);
-                    setSelectedActivity(null);
+                    setSelectedActivities([]);
                     setPreferredTime("");
                     setSubmitError("");
                   }}

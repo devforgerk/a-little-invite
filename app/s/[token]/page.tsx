@@ -34,6 +34,7 @@ type StatusPayload = {
   response: {
     choice: ResponseChoice;
     note: string;
+    selectedActivities?: ActivityId[];
     selectedActivity: ActivityId | null;
     preferredTime: string;
     respondedAt: string;
@@ -125,6 +126,15 @@ export default function PrivateStatusPage() {
         .join(", ")
     : "";
   const AnswerIcon = payload?.response ? answerIcons[payload.response.choice] : null;
+  const responseActivities = payload?.response
+    ? (payload.response.selectedActivities ??
+      (payload.response.selectedActivity ? [payload.response.selectedActivity] : []))
+    : [];
+  const responseActivitySummary = payload
+    ? responseActivities
+        .map((activity) => getActivityLabel(activity, payload.invitation.customActivity))
+        .join(", ")
+    : "";
 
   return (
     <main className="status-flow-page">
@@ -202,18 +212,13 @@ export default function PrivateStatusPage() {
               </div>
               <p>They answered</p>
               <h2>{responseLabels[payload.response.choice]}</h2>
-              {(payload.response.selectedActivity || payload.response.preferredTime) && (
+              {(responseActivities.length > 0 || payload.response.preferredTime) && (
                 <dl className="status-answer-preferences">
-                  {payload.response.selectedActivity && (
+                  {responseActivities.length > 0 && (
                     <div>
                       <Check size={17} aria-hidden="true" />
-                      <dt>Their plan</dt>
-                      <dd>
-                        {getActivityLabel(
-                          payload.response.selectedActivity,
-                          payload.invitation.customActivity,
-                        )}
-                      </dd>
+                      <dt>{responseActivities.length === 1 ? "Their plan" : "Their plans"}</dt>
+                      <dd>{responseActivitySummary}</dd>
                     </div>
                   )}
                   {payload.response.preferredTime && (
